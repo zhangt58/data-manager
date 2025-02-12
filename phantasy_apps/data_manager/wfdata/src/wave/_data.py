@@ -82,8 +82,8 @@ def process_bpm_cplx(names: list[str], row: pd.Series):
     return mag_pha
 
 
-def _plot_no_data(ax):
-    ax.annotate("NO DATA", (0.5, 0.5), xycoords='axes fraction',
+def _plot_no_data(ax, reason: str = "NO DATA"):
+    ax.annotate(reason, (0.5, 0.5), xycoords='axes fraction',
                 color="gray", fontsize=28, ha='center', va='center')
 
 
@@ -98,7 +98,10 @@ def plot(df: pd.DataFrame, t0: str, title: str):
     # BCM
     bcm_cols = [c for c in df.columns if c.startswith("BCM") and not c.startswith('BCM4')]
     if bcm_cols:
-        df.plot(x='t_us', y=bcm_cols, ax=ax1, xlabel="")
+        if df[bcm_cols].isna().all().all():
+            _plot_no_data(ax1, "All NaN")
+        else:
+            df.plot(x='t_us', y=bcm_cols, ax=ax1, xlabel="")
     else:
         # show NO DATA
         _plot_no_data(ax1)
@@ -117,11 +120,17 @@ def plot(df: pd.DataFrame, t0: str, title: str):
     bpm_amp_cols = [c for c in df.columns if 'MAG' in c]
     bpm_pha_cols = [c for c in df.columns if 'PHA' in c]
     if bpm_amp_cols:
-        df.plot(x='t_us', y=bpm_amp_cols, ax=ax2, xlabel="")
+        if df[bpm_amp_cols].isna().all().all():
+            _plot_no_data(ax2, "All NaN")
+        else:
+            df.plot(x='t_us', y=bpm_amp_cols, ax=ax2, xlabel="")
     else:
         _plot_no_data(ax2)
     if bpm_pha_cols:
-        df.plot(x='t_us', y=bpm_pha_cols, ax=ax3)
+        if df[bpm_pha_cols].isna().all().all():
+            _plot_no_data(ax3, "All NaN")
+        else:
+            df.plot(x='t_us', y=bpm_pha_cols, ax=ax3)
     else:
         _plot_no_data(ax3)
     ax2.set_ylabel("Intensity [a.u.]")
