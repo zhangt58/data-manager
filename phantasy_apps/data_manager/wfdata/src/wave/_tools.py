@@ -141,7 +141,7 @@ def export_df(df: pd.DataFrame, outdir: Path, out_filename: str, out_formats: li
     for fmt in out_formats:
         out_filepath = outdir.joinpath(f"{out_filename}.{fmt}")
         _export_fn_map[fmt](df, out_filepath)
-        logger.info(f"{LOWER_LEFT_CORNER}Exported to {out_filepath}")
+        logger.info(f"{LOWER_LEFT_CORNER}As {out_filepath}")
 
 
 def _export_df_as_mat(df: pd.DataFrame, out_filepath: Path):
@@ -174,6 +174,7 @@ def _export_df_as_h5(df: pd.DataFrame, out_filepath: Path):
     store.get_storer('TimeWindow').attrs.t_start = t_start
     store.get_storer('TimeWindow').attrs.t_zero = t_zero
     store.close()
+
 
 def _export_df_as_csv(df: pd.DataFrame, out_filepath: Path):
     """ Export df as .csv file.
@@ -233,8 +234,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         if not pth.is_file():
             logger.warning(f"Not exists: {pth}")
             continue
+        logger.info(f"Generating figure {pth}...")
         gen_figure(pth, img_types, img_outdir_path, is_opt=args.is_opt)
-
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],
@@ -259,7 +260,7 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     for typ in figure_types:
         img_outpath = out_dirpath.joinpath(filename.replace(".h5", f".{typ}"))
         fig.savefig(img_outpath)
-        logger.info(f"Generated {img_outpath}")
+        logger.info(f"{LOWER_LEFT_CORNER}As {img_outpath}")
     #
     plt.close(fig)
 
