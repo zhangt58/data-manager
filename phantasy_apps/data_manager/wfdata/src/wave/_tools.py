@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 import argparse
 import sys
 import logging
@@ -10,8 +9,8 @@ import pandas as pd
 from pathlib import Path
 from scipy.io import savemat
 
-from _utils import read_path, group_datafiles
-from _data import read_data, plot
+from ._utils import read_path, group_datafiles
+from ._data import read_data, plot
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -23,11 +22,11 @@ logger.addHandler(stream_handler)
 LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
 
 
-def merge_tool():
+def merge_tool(call_as_subtool: bool = False, prog: str = None):
     """ Merge the separated .h5 files for each group/device into one on the MPS fault ID.
     """
-
     parser = argparse.ArgumentParser(
+                prog=prog,
                 description="Merge the BCM/BPM datasets into one file by the MPS fault ID.")
     parser.add_argument("data_dir", default=None, type=str, nargs='?',
                         help="The directory path of the folder of the original dataset files.")
@@ -39,7 +38,10 @@ def merge_tool():
                         help="The CSV filepath for exporting the metadata table of the original "
                              "data files.")
 
-    args = parser.parse_args(sys.argv[1:])
+    if call_as_subtool:
+        args = parser.parse_args(sys.argv[2:])
+    else:
+        args = parser.parse_args(sys.argv[1:])
 
     if args.data_dir is None:
         logger.warning("The directory path of the original data files must be provided.")
@@ -56,19 +58,18 @@ def merge_tool():
     for i, (ftid, grp) in enumerate(df_evts.groupby(df_evts.index)):
         out_filepath = group_datafiles(ftid, grp, args.out_dir)
         logger.info(f"Merged {grp.shape[0]} files on MPS fault ID {ftid}...")
-        # gen_figure(out_filepath, args.fig_types)
-        if i == 9999:
-            break
+
     if args.csvfile_table is not None:
         df_evts.to_csv(args.csvfile_table)
         logger.info(f"Exported table of events info to {args.csvfile_table}")
 
 
-def convert_tool():
+def convert_tool(call_as_subtool: bool = False, prog: str = None):
     """ Convert the data files to other formats.
     """
     _suppored_fmts = ('mat', 'h5', 'csv', 'xlsx')
     parser = argparse.ArgumentParser(
+                prog=prog,
                 description="Convert the merged HDF files to other formats, the exported "
                             "filename is suffixed with '_opt' by default.")
     parser.add_argument("data_filepath", default=None, nargs='+',
@@ -89,7 +90,10 @@ def convert_tool():
     parser.add_argument("--suffix", dest="suffix", default="_opt",
                         help="The string suffix to the export filename.")
 
-    args = parser.parse_args(sys.argv[1:])
+    if call_as_subtool:
+        args = parser.parse_args(sys.argv[2:])
+    else:
+        args = parser.parse_args(sys.argv[1:])
 
     if args.outdir is None:
         logger.warning("Output directory must be defined through --outdir.")
@@ -188,10 +192,11 @@ def _export_df_as_xlsx(df: pd.DataFrame, out_filepath: Path):
     df.to_excel(out_filepath, index=False)
 
 
-def plot_tool():
+def plot_tool(call_as_subtool: bool = False, prog: str = None):
     """ Plot the merged dataset to images.
     """
     parser = argparse.ArgumentParser(
+            prog=prog,
             description="Generate images from the merged BCM/BPM waveform dataset files; "
                         "Pass flag -opt if working with the optimized dataset files (see convert tool).")
     parser.add_argument("data_filepath", default=None, nargs='+',
@@ -206,7 +211,10 @@ def plot_tool():
     parser.add_argument("-opt", action="store_true", dest="is_opt",
                         help="If the data_filepaths are optimized .h5 files.")
 
-    args = parser.parse_args(sys.argv[1:])
+    if call_as_subtool:
+        args = parser.parse_args(sys.argv[2:])
+    else:
+        args = parser.parse_args(sys.argv[1:])
 
     if not args.img_types:
         img_types = ("png", )

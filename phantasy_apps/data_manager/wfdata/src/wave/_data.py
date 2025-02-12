@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from functools import partial
-from _log import logger
+from ._log import logger
 
 
 def read_data(filepath: str,

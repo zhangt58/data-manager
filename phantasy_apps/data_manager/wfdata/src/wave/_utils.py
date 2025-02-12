@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 from scipy.io import savemat
-from _log import logger
+from ._log import logger
 
 
 _PATTERN = re.compile(r"(.*)-(.*)-(.*)_(.*)\.h5")
