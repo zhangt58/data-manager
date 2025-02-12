@@ -1,0 +1,58 @@
+"""Template arguments:
+
+- pkg_name: Python package name, default if mypkg
+- exe_name: Executable name for the GUI app, default is myApp
+
+"""
+from setuptools import setup
+
+
+PKG_NAME = "dm.wfdata"
+
+
+install_requires = [
+    "pandas>=1.5,<2.0",
+    "numpy>=1.20,<2.0",
+    "scipy>=1.10,<2.0",
+    "matplotlib>=3.5,<3.7",
+    "tables>=3.7,<4.0",
+    "openpyxl>3.0.9,<3.2",
+]
+
+
+def set_entry_points():
+    r = {}
+    r['gui_scripts'] = [
+        f'dm-wave={PKG_NAME}.wave:main',
+    ]
+    return r
+
+
+def readme():
+    with open('README.md', 'r') as f:
+        return f.read()
+
+
+def read_license():
+    with open('LICENSE') as f:
+        return f.read()
+
+
+setup(
+    name=f'{PKG_NAME}',
+    version='0.1.0',
+    description='Tools for Managing BPM/BCM waveform data',
+    long_description=readme(),
+    license=read_license(),
+    packages=[
+        f'{PKG_NAME}.wave',
+        f'{PKG_NAME}'
+    ],
+    package_dir={
+        f'{PKG_NAME}.wave': 'src/wave',
+        f'{PKG_NAME}': 'src',
+    },
+    entry_points=set_entry_points(),
+    install_requires=install_requires,
+    include_package_data=True
+)
