@@ -66,11 +66,19 @@ def read_path(dir_path: Path, file_type: str = "h5",
     return df.set_index('ID').sort_index()
 
 
-
-def group_datafiles(ftid: int, df_grp: pd.DataFrame, root_dir: str = ".") -> Path:
+def group_datafiles(ftid: int, df_grp: pd.DataFrame,
+                    root_dir: str = ".", overwrite: bool = False) -> Path:
     """ Group rows of datafiles into one.
     """
     out_filepath = Path(root_dir).joinpath(f"{ftid}.h5")
+
+    if out_filepath.is_file():
+        if overwrite:
+            logger.info(f"Overwriting {out_filepath}...")
+        else:
+            logger.info(f"Skip existing {out_filepath}, force with --overwrite")
+            return out_filepath
+
     out_filepath.parent.mkdir(parents=True, exist_ok=True)
     #
     store = pd.HDFStore(out_filepath,

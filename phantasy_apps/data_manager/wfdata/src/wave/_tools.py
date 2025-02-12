@@ -29,14 +29,13 @@ def merge_tool(call_as_subtool: bool = False, prog: str = None):
                 prog=prog,
                 description="Merge the BCM/BPM datasets into one file by the MPS fault ID.")
     parser.add_argument("data_dir", default=None, type=str, nargs='?',
-                        help="The directory path of the folder of the original dataset files.")
+                        help="The directory path of the folder for the original .h5 files.")
     parser.add_argument("out_dir", default=None, type=str, nargs='?',
-                        help="The directory path of the folder to keep the output files.")
-    parser.add_argument("--override", action="store_true",
-                        help="Override the existing merged data files.")
-    parser.add_argument("--csvfile-table", dest="csvfile_table",
-                        help="The CSV filepath for exporting the metadata table of the original "
-                             "data files.")
+                        help="The directory path of the folder for the merged files.")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="Overwrite the existing merged data files.")
+    parser.add_argument("--csv-report", dest="csv_report",
+                        help="The CSV filepath for writing the processed event report.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -59,9 +58,9 @@ def merge_tool(call_as_subtool: bool = False, prog: str = None):
         out_filepath = group_datafiles(ftid, grp, args.out_dir)
         logger.info(f"Merged {grp.shape[0]} files on MPS fault ID {ftid}...")
 
-    if args.csvfile_table is not None:
-        df_evts.to_csv(args.csvfile_table)
-        logger.info(f"Exported table of events info to {args.csvfile_table}")
+    if args.csv_report is not None:
+        df_evts.to_csv(args.csv_report)
+        logger.info(f"Exported table of events info to {args.csv_report}")
 
 
 def convert_tool(call_as_subtool: bool = False, prog: str = None):
