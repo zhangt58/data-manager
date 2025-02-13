@@ -55,7 +55,7 @@ def merge_tool(call_as_subtool: bool = False, prog: str = None):
     df_evts = read_path(Path(args.data_dir))
 
     for i, (ftid, grp) in enumerate(df_evts.groupby(df_evts.index)):
-        out_filepath = group_datafiles(ftid, grp, args.out_dir)
+        out_filepath = group_datafiles(ftid, grp, args.out_dir, args.overwrite)
         logger.info(f"Merged {grp.shape[0]} files on MPS fault ID {ftid}...")
 
     if args.csv_report is not None:
