@@ -57,12 +57,18 @@ def read_path(dir_path: Path, file_type: str = "h5",
         ts = datetime.strptime(f"{ts1}.{ts2}", "%Y%m%dT%H%M%S.%f")
         # 0: start, 1: end
         time_type, dev_type = (1, "BCM") if grp_name.startswith('BCM') else (0, "BPM")
-        records.append((ftid, grp_name, pth, ts.timestamp(), time_type, dev_type))
+        records.append((ftid, grp_name, pth.name, ts.timestamp(), time_type, dev_type, pth))
         cnt += 1
         logger.info(f"[{cnt:3d}] Processed {pth}")
 
-    df = pd.DataFrame.from_records(records,
-                                   columns=["ID", "Name", "Path", "Time", "Time_Type", "Dev_Type"])
+    df = pd.DataFrame.from_records(
+            records,
+            columns=["ID", "Name", "Filename", "TimeStamp", "TimeType", "DevType", "FilePath"])
+    df['Date'] = pd.to_datetime(df['TimeStamp'], unit='s').map(
+            lambda i: i.strftime("%Y-%m-%d"))
+    df['Time'] = pd.to_datetime(df['TimeStamp'], unit='s').map(
+        lambda i: i.strftime("%H:%M:%S.%f"))
+    
     return df.set_index('ID').sort_index()
 
 
@@ -92,19 +98,19 @@ def group_datafiles(ftid: int, df_grp: pd.DataFrame,
         "BPM": []
     }
     for i, row in df_grp.iterrows():
-        name, filepath, ts = row.Name, row.Path, datetime.fromtimestamp(row.Time)
+        name, filepath, ts = row.Name, row.FilePath, datetime.fromtimestamp(row.TimeStamp)
         _df = pd.read_hdf(filepath)
         # trim the "<SYS>_<SUBS>:" for BPM names
         _df.index = _df.index.str.replace(r".*:(BPM_D[0-9]{4}.*)", r"\1", regex=True)
         _info['Alias'].update(_df.pop('PV').to_dict())
-        if row.Dev_Type == "BPM":
+        if row.DevType == "BPM":
             name = f"BPM_{name}"
         _info['Time'].update({name: ts.isoformat()})
-        if row.Time_Type == 0:
+        if row.TimeType == 0:
             _t_idx = pd.date_range(start=ts, periods=_df.shape[1], freq='us')
         else:
             _t_idx = pd.date_range(end=ts, periods=_df.shape[1], freq='us')
-        _dfs[row.Dev_Type].append(_df.T.set_index(_t_idx))
+        _dfs[row.DevType].append(_df.T.set_index(_t_idx))
     store.put('INFO/PV',
         pd.DataFrame.from_records(
             list(sorted(_info['Alias'].items())),
