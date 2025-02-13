@@ -3,20 +3,21 @@
 import argparse
 import sys
 
-from ._tools import convert_tool
-from ._tools import merge_tool
-from ._tools import plot_tool
+from ._tools import (
+    convert_tool,
+    merge_tool,
+    plot_tool
+)
 
 from ._utils import (
-    read_path,
     group_datafiles,
+    read_path,
 )
 
 from ._data import (
-    read_data,
     plot,
+    read_data,
 )
-
 
 __authors__ = "Tong Zhang"
 __copyright__ = "(c) 2025, Facility for Rare Isotope Beams," \

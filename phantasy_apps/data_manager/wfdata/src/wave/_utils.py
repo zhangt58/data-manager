@@ -7,10 +7,12 @@ ID into one HDF5 file.
 
 import re
 import pandas as pd
+
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 from scipy.io import savemat
+
 from ._log import logger
 
 
@@ -68,7 +70,7 @@ def read_path(dir_path: Path, file_type: str = "h5",
             lambda i: i.strftime("%Y-%m-%d"))
     df['Time'] = pd.to_datetime(df['TimeStamp'], unit='s').map(
         lambda i: i.strftime("%H:%M:%S.%f"))
-    
+
     return df.set_index('ID').sort_index()
 
 
@@ -217,7 +219,6 @@ def test():
         #if i == 1:
         #    break
     #
-
 
 if __name__ == "__main__":
     # main()

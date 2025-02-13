@@ -2,22 +2,24 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import sys
 import logging
+import sys
 import matplotlib.pyplot as plt
 import pandas as pd
+
 from pathlib import Path
 from scipy.io import savemat
 
-from ._utils import read_path, group_datafiles
-from ._data import read_data, plot
+from ._utils import (
+    read_path,
+    group_datafiles
+)
+from ._data import (
+    read_data,
+    plot
+)
+from ._log import logger
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-formatter = logging.Formatter("[%(asctime)s] - %(levelname)s - %(message)s")
-stream_handler = logging.StreamHandler(sys.stdout)
-stream_handler.setFormatter(formatter)
-logger.addHandler(stream_handler)
 
 LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
 
