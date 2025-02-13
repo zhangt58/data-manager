@@ -14,6 +14,7 @@ from typing import Literal
 from scipy.io import savemat
 
 from ._log import logger
+from ._misc import _DATETIME1
 
 
 _PATTERN = re.compile(r"(.*)-(.*)-(.*)_(.*)\.h5")
@@ -58,7 +59,10 @@ def read_path(dir_path: Path, file_type: str = "h5",
         ts2 += T_US_OFFSET.get(grp_name, 0)
         ts = datetime.strptime(f"{ts1}.{ts2}", "%Y%m%dT%H%M%S.%f")
         # 0: start, 1: end
-        time_type, dev_type = (1, "BCM") if grp_name.startswith('BCM') else (0, "BPM")
+        if ts <= _DATETIME1:
+            time_type, dev_type = (1, "BCM") if grp_name.startswith('BCM') else (0, "BPM")
+        else:
+            time_type, dev_type = (0, "BCM") if grp_name.startswith('BCM') else (0, "BPM")
         records.append((ftid, grp_name, pth.name, ts.timestamp(), time_type, dev_type, pth))
         cnt += 1
         logger.info(f"[{cnt:3d}] Processed {pth}")
