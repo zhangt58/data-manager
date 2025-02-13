@@ -88,6 +88,8 @@ def convert_tool(call_as_subtool: bool = False, prog: str = None):
                         help="The directory for the exported files.")
     parser.add_argument("--suffix", dest="suffix", default="_opt",
                         help="The string suffix to the export filename.")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="Overwrite the existing exported files.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -125,10 +127,11 @@ def convert_tool(call_as_subtool: bool = False, prog: str = None):
         pth_name_0 = pth.name.rsplit('.', 1)[0]
         out_fn_no_ext = f"{pth_name_0}{args.suffix}"
         logger.info(f"Exporting {pth}...")
-        export_df(df, outdir_path, out_fn_no_ext, fmts)
+        export_df(df, outdir_path, out_fn_no_ext, fmts, args.overwrite)
 
 
-def export_df(df: pd.DataFrame, outdir: Path, out_filename: str, out_formats: list[str]):
+def export_df(df: pd.DataFrame, outdir: Path, out_filename: str,
+              out_formats: list[str], overwrite: bool = False):
     """ Export the dataframe to *outdir* directory as the given formats.
     """
     _export_fn_map = {
@@ -139,8 +142,15 @@ def export_df(df: pd.DataFrame, outdir: Path, out_filename: str, out_formats: li
     }
     for fmt in out_formats:
         out_filepath = outdir.joinpath(f"{out_filename}.{fmt}")
-        _export_fn_map[fmt](df, out_filepath)
-        logger.info(f"{LOWER_LEFT_CORNER}As {out_filepath}")
+        if out_filepath.is_file():
+            if overwrite:
+                _export_fn_map[fmt](df, out_filepath)
+                logger.info(f"{LOWER_LEFT_CORNER}As {out_filepath} (overwritten)")
+            else:
+                logger.info(f"Skip existing {out_filepath}, force with --overwrite")
+        else:
+            _export_fn_map[fmt](df, out_filepath)
+            logger.info(f"{LOWER_LEFT_CORNER}As {out_filepath}")
 
 
 def _export_df_as_mat(df: pd.DataFrame, out_filepath: Path):
@@ -210,6 +220,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                              "the parent directory of the data file.")
     parser.add_argument("-opt", action="store_true", dest="is_opt",
                         help="If the data_filepaths are optimized .h5 files.")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="Overwrite the existing image files.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -234,11 +246,13 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
             logger.warning(f"Not exists: {pth}")
             continue
         logger.info(f"Generating figure {pth}...")
-        gen_figure(pth, img_types, img_outdir_path, is_opt=args.is_opt)
+        gen_figure(pth, img_types, img_outdir_path, is_opt=args.is_opt,
+                   overwrite=args.overwrite)
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],
-               out_dirpath: Path = None, is_opt: bool = False):
+               out_dirpath: Path = None, is_opt: bool = False,
+               overwrite: bool = False):
 
     if out_dirpath is None:
         out_dirpath = data_filepath.parent
@@ -258,8 +272,15 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     fig.tight_layout()
     for typ in figure_types:
         img_outpath = out_dirpath.joinpath(filename.replace(".h5", f".{typ}"))
-        fig.savefig(img_outpath)
-        logger.info(f"{LOWER_LEFT_CORNER}As {img_outpath}")
+        if img_outpath.is_file():
+            if overwrite:
+                fig.savefig(img_outpath)
+                logger.info(f"{LOWER_LEFT_CORNER}As {img_outpath} (overwritten)")
+            else:
+                logger.info(f"{LOWER_LEFT_CORNER}Skip existing {img_outpath}, force with --overwrite")
+        else:
+            fig.savefig(img_outpath)
+            logger.info(f"{LOWER_LEFT_CORNER}As {img_outpath}")
     #
     plt.close(fig)
 
