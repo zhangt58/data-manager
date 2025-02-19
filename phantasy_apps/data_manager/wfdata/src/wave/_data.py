@@ -116,7 +116,7 @@ def plot(df: pd.DataFrame, t0: str, title: str):
     grid_color = "#7F8C8D"
 
     # BCM
-    bcm_cols = [c for c in df.columns if c.startswith("BCM") and not c.startswith('BCM4')]
+    bcm_cols = [c for c in df.columns if c.startswith("BCM") and not c.endswith('NPERMIT')]
     if bcm_cols:
         if df[bcm_cols].isna().all().all():
             _plot_no_data(ax1, "All NaN")
