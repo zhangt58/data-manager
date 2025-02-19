@@ -132,7 +132,7 @@ def plot(df: pd.DataFrame, t0: str, title: str):
     ax1r = ax1.twinx()
     npermit_col = [c for c in df.columns if c.endswith('NPERMIT')][0]
     df.plot(x='t_us', y=npermit_col, c='#2C3E50', ls='-.', lw=1, ax=ax1r,
-            label="BCM-NPERMIT",
+            label=npermit_col,
             fontsize=14, ylim=(-0.2, 1.2))
     ax1r.set_ylabel("NPERMIT")
     ax1r.legend(loc="lower left")
