@@ -23,7 +23,7 @@ __authors__ = "Tong Zhang"
 __copyright__ = "(c) 2025, Facility for Rare Isotope Beams," \
                 " Michigan State University"
 __contact__ = "Tong Zhang <zhangt@frib.msu.edu>"
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 __title__ = "DataManager: Manage the Accelerator Data"
 
 
