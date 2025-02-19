@@ -36,22 +36,41 @@ def read_data(filepath: str,
     dfs = df_bcm + df_bpm
     df_all = pd.concat(dfs, axis=1)
 
-    if 'BCM4_NPERMIT' not in df_all:
+    npermit_names = ('BCM4_NPERMIT', 'BCM5_NPERMIT', 'BCM5_NPERMIT')
+    if all(i not in df_all for i in npermit_names):
         logger.warning("No NPERMIT signals, cannot figure out T trip.")
         store.close()
         return None, ""
 
     # find the first index loc (int) that npermit goes high (1)
-    # "BCM4_NPERMIT" must be a valid column
-    # first occurence of high NPERMIT bit:
-    t0_idx: int = (df_all['BCM4_NPERMIT']==1.0).argmax()
+    # find the first occurence of BCM?_NPERMIT that with high bits, and drop others
+    # if none is found, throw out error
+
+    npermit_col: str = None
+    for c in npermit_names:
+        if c not in df_all.columns:
+            continue
+        if df_all[c].sum() == 0:
+            continue
+        npermit_col = c
+
+    if npermit_col is not None:
+        t0_idx: int = (df_all[npermit_col]==1.0).argmax()
+        # only keep one column for npermit
+        for c in npermit_names:
+            if c in df_all.columns and c != npermit_col:
+                df_all.pop(c)
+    else:
+        logger.warning("No high bit signals in NPERMITs, cannot figure out T trip.")
+        store.close()
+        return None, ""
+
     t0_val: pd.Timestamp = df_all.index[t0_idx]
     t0_str: str = t0_val.to_pydatetime().isoformat()
+
     # the dataframe-of-interest
     df = df_all.iloc[t0_idx + t_range[0]:t0_idx + t_range[1], :].copy()
     df['t_us'] = (df.index - t0_val) / pd.Timedelta(1, "us")
-    # only keep one column for npermit: BCM4_NPERMIT
-    [df.pop(c) for c in ('BCM5_NPERMIT', 'BCM6_NPERMIT') if c in df.columns]
     # process BPM MAG and PHA columns
     bpm_cols = store['INFO/PV'].filter(regex=r'(BPM_D[0-9]{4}).*', axis=0)
     bpm_names = bpm_cols.index.str.replace(r"(BPM_D[0-9]{4}).*", r"\1", regex=True).unique().to_list()
