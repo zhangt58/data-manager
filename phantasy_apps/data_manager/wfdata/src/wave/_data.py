@@ -10,42 +10,82 @@ from functools import partial
 
 from ._log import logger
 
+def _process_format_v0(store):
+    logger.info("Reading data per format v0")
+    # BCM
+    all_keys = store.keys()
+    bcm_dfs = []
+    for i in ("DATA", "NPERMIT"):
+        k = f"/BCM/{i}"
+        if k not in all_keys:
+            continue
+        bcm_dfs.append(store[k])
+    # BPM
+    bpm_dfs = []
+    for i in ("MAG", "PHA"):
+        k = f"/BPM/{i}"
+        if k not in all_keys:
+            continue
+        bpm_dfs.append(store[k])
+    #
+    bpm_cols = store['/INFO/PV'].filter(regex=r'(BPM_D[0-9]{4}).*', axis=0)
+    bpm_names = bpm_cols.index.str.replace(r"(BPM_D[0-9]{4}).*", r"\1", regex=True).unique().to_list()
+    #
+    return bcm_dfs + bpm_dfs, bpm_names
+
+
+def _process_format_v1(store):
+    logger.info("Reading data per format v1")
+    df_t0 = store['/t0']
+    df_grp = store['/grp']
+    df_info = store['/info']
+    df_bcm = store['/bcm'].T
+    df_bpm = store['/bpm'].T
+
+    # BCM
+    bcm_grps = df_grp.index[df_grp.index.str.startswith('BCM')]
+    bcm_dfs = []
+    for bcm_grp in bcm_grps:
+        # print(f"{bcm_grp} T0: {df_t0[bcm_grp]}")
+        _bcm_df = df_bcm[df_grp[bcm_grp]]
+        _t_idx = pd.date_range(start=df_t0[bcm_grp], periods=_bcm_df.shape[0], freq='us')
+        bcm_dfs.append(_bcm_df.set_index(_t_idx))
+
+    # BPM
+    bpm_grps = df_grp.index[~df_grp.index.str.startswith('BCM')]
+    bpm_dfs = []
+    for bpm_grp in bpm_grps:
+        print(f"{bpm_grp} T0: {df_t0[bpm_grp]}")
+        _bpm_df = df_bpm[df_grp[bpm_grp]]
+        _t_idx = pd.date_range(start=df_t0[bpm_grp], periods=_bpm_df.shape[0], freq='us')
+        bpm_dfs.append(_bpm_df.set_index(_t_idx))
+    #
+    bpm_names = [f"BPM_{i}" for i in bpm_grps]
+    #
+    return bcm_dfs + bpm_dfs, bpm_names
+
+
 
 def read_data(filepath: str,
               t_range: tuple[int, int] = (-800, 400)):
     """ Read and consolidate dataset.
     """
-    store = pd.HDFStore(filepath, mode="r")
-    all_keys = store.keys()
-    # BCM
-    df_bcm = []
-    for i in ("DATA", "NPERMIT"):
-        k = f"/BCM/{i}"
-        if k not in all_keys:
-            continue
-        df_bcm.append(store[k])
-
-    # BPM
-    df_bpm = []
-    for i in ("MAG", "PHA"):
-        k = f"/BPM/{i}"
-        if k not in all_keys:
-            continue
-        df_bpm.append(store[k])
-
-    dfs = df_bcm + df_bpm
-    df_all = pd.concat(dfs, axis=1)
+    with pd.HDFStore(filepath, mode="r") as store:
+        if '/grp' in store.keys():
+            dfs, bpm_names = _process_format_v1(store)
+        else:
+            dfs, bpm_names = _process_format_v0(store)
+        #
+    df_all = pd.concat(dfs, axis=1).sort_index(axis=1)
 
     npermit_names = ('BCM4_NPERMIT', 'BCM5_NPERMIT', 'BCM5_NPERMIT')
     if all(i not in df_all for i in npermit_names):
         logger.warning("No NPERMIT signals, cannot figure out T trip.")
-        store.close()
         return None, ""
 
     # find the first index loc (int) that npermit goes high (1)
     # find the first occurence of BCM?_NPERMIT that with high bits, and drop others
     # if none is found, throw out error
-
     npermit_col: str = None
     for c in npermit_names:
         if c not in df_all.columns:
@@ -62,7 +102,6 @@ def read_data(filepath: str,
                 df_all.pop(c)
     else:
         logger.warning("No high bit signals in NPERMITs, cannot figure out T trip.")
-        store.close()
         return None, ""
 
     t0_val: pd.Timestamp = df_all.index[t0_idx]
@@ -72,17 +111,15 @@ def read_data(filepath: str,
     df = df_all.iloc[t0_idx + t_range[0]:t0_idx + t_range[1], :].copy()
     df['t_us'] = (df.index - t0_val) / pd.Timedelta(1, "us")
     # process BPM MAG and PHA columns
-    bpm_cols = store['INFO/PV'].filter(regex=r'(BPM_D[0-9]{4}).*', axis=0)
-    bpm_names = bpm_cols.index.str.replace(r"(BPM_D[0-9]{4}).*", r"\1", regex=True).unique().to_list()
-
+    # bpm_cols = store['INFO/PV'].filter(regex=r'(BPM_D[0-9]{4}).*', axis=0)
+    # bpm_names = bpm_cols.index.str.replace(r"(BPM_D[0-9]{4}).*", r"\1", regex=True).unique().to_list()
     new_cols = []
     for name in bpm_names:
         new_cols.extend([f"{name}-MAG", f"{name}-PHA"])
     df[new_cols] = df.apply(partial(process_bpm_cplx, bpm_names), axis=1).tolist()
     # drop BPM_D####:MAG/PHAi columns
-    [df.pop(c) for c in bpm_cols.index if c in df.columns]
-    # close the file
-    store.close()
+    cols_to_drop = df.filter(regex=r"BPM_.*[1-4]{1}$").columns
+    df.drop(columns=cols_to_drop, inplace=True)
     return df, t0_str
 
 

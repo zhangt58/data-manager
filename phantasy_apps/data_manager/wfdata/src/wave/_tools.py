@@ -255,6 +255,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
 def gen_figure(data_filepath: Path, figure_types: list[str],
                out_dirpath: Path = None, is_opt: bool = False,
                overwrite: bool = False):
+    # is_opt: If set, work with the converted data file
+    # otherwise, work with the merged file v0 or the new v1 format raw file.
 
     if out_dirpath is None:
         out_dirpath = data_filepath.parent
