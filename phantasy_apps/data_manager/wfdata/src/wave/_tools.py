@@ -56,13 +56,17 @@ def merge_tool(call_as_subtool: bool = False, prog: str = None):
 
     df_evts = read_path(Path(args.data_dir))
 
-    for i, (ftid, grp) in enumerate(df_evts.groupby(df_evts.index)):
-        out_filepath = group_datafiles(ftid, grp, args.out_dir, args.overwrite)
-        logger.info(f"Merged {grp.shape[0]} files on MPS fault ID {ftid}...")
-
     if args.csv_report is not None:
         df_evts.to_csv(args.csv_report)
         logger.info(f"Exported table of events info to {args.csv_report}")
+
+    for i, (ftid, grp) in enumerate(df_evts.groupby(df_evts.index)):
+        try:
+            out_filepath = group_datafiles(ftid, grp, args.out_dir, args.overwrite)
+        except Exception as e:
+            logger.warning(f"Error processing {grp.shape[0]} files on MPS fault ID {ftid}: {e}")
+        else:
+            logger.info(f"Merged {grp.shape[0]} files on MPS fault ID {ftid}...")
 
 
 def convert_tool(call_as_subtool: bool = False, prog: str = None):

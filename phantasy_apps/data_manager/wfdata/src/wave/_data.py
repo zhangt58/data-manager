@@ -10,32 +10,42 @@ from functools import partial
 
 from ._log import logger
 
+
 def _process_format_v0(store):
-    logger.info("Reading data per format v0")
-    # BCM
-    all_keys = store.keys()
-    bcm_dfs = []
-    for i in ("DATA", "NPERMIT"):
-        k = f"/BCM/{i}"
-        if k not in all_keys:
-            continue
-        bcm_dfs.append(store[k])
-    # BPM
-    bpm_dfs = []
-    for i in ("MAG", "PHA"):
-        k = f"/BPM/{i}"
-        if k not in all_keys:
-            continue
-        bpm_dfs.append(store[k])
-    #
-    bpm_cols = store['/INFO/PV'].filter(regex=r'(BPM_D[0-9]{4}).*', axis=0)
-    bpm_names = bpm_cols.index.str.replace(r"(BPM_D[0-9]{4}).*", r"\1", regex=True).unique().to_list()
+    logger.info(f"Reading {store.filename} per format v0")
+    try:
+        # BCM
+        all_keys = store.keys()
+        bcm_dfs = []
+        for i in ("DATA", "NPERMIT"):
+            k = f"/BCM/{i}"
+            if k not in all_keys:
+                continue
+            bcm_dfs.append(store[k])
+    except Exception as e:
+        logger.warning(f"Error processing BCM {store.filename}: {e}")
+        return None, None
+    try:
+        # BPM
+        bpm_dfs = []
+        for i in ("MAG", "PHA"):
+            k = f"/BPM/{i}"
+            if k not in all_keys:
+                continue
+            bpm_dfs.append(store[k])
+        #
+        bpm_cols = store['/INFO/PV'].filter(regex=r'(BPM_D[0-9]{4}).*', axis=0)
+        bpm_names = bpm_cols.index.str.replace(r"(BPM_D[0-9]{4}).*", r"\1", regex=True).unique().to_list()
+        #
+    except Exception as e:
+        logger.warning(f"Error processing BPM {store.filename}: {e}")
+        return None, None
     #
     return bcm_dfs + bpm_dfs, bpm_names
 
 
 def _process_format_v1(store):
-    logger.info("Reading data per format v1")
+    logger.info(f"Reading {store.filename} per format v1")
     df_t0 = store['/t0']
     df_grp = store['/grp']
     df_info = store['/info']
@@ -55,7 +65,7 @@ def _process_format_v1(store):
     bpm_grps = df_grp.index[~df_grp.index.str.startswith('BCM')]
     bpm_dfs = []
     for bpm_grp in bpm_grps:
-        print(f"{bpm_grp} T0: {df_t0[bpm_grp]}")
+        # print(f"{bpm_grp} T0: {df_t0[bpm_grp]}")
         _bpm_df = df_bpm[df_grp[bpm_grp]]
         _t_idx = pd.date_range(start=df_t0[bpm_grp], periods=_bpm_df.shape[0], freq='us')
         bpm_dfs.append(_bpm_df.set_index(_t_idx))
@@ -63,7 +73,6 @@ def _process_format_v1(store):
     bpm_names = [f"BPM_{i}" for i in bpm_grps]
     #
     return bcm_dfs + bpm_dfs, bpm_names
-
 
 
 def read_data(filepath: str,
@@ -76,6 +85,10 @@ def read_data(filepath: str,
         else:
             dfs, bpm_names = _process_format_v0(store)
         #
+    if dfs is None:
+        logger.warning("Error reading data.")
+        return None, ""
+
     df_all = pd.concat(dfs, axis=1).sort_index(axis=1)
 
     npermit_names = ('BCM4_NPERMIT', 'BCM5_NPERMIT', 'BCM5_NPERMIT')
