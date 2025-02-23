@@ -12,11 +12,11 @@ PKG_NAME = "dm.wfdata"
 
 install_requires = [
     "pandas>=1.5,<2.0",
-    "numpy>=1.20,<2.0",
+    "numpy>=1.24,<2.0",
     "scipy>=1.10,<2.0",
-    "matplotlib>=3.5,<3.7",
+    "matplotlib>=3.6,<3.7",
     "tables>=3.7,<4.0",
-    "openpyxl>3.0.9,<3.2",
+    "openpyxl>=3.0,<3.2",
 ]
 
 
