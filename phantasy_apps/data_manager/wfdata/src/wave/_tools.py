@@ -126,12 +126,25 @@ def convert_tool(call_as_subtool: bool = False, prog: str = None):
     data_filepaths = sorted(set(args.data_filepath))
     for pth_s in data_filepaths:
         pth = Path(pth_s)
+        pth_name_0 = pth.name.rsplit('.', 1)[0]
+        out_fn_no_ext = f"{pth_name_0}{args.suffix}"
+
+        #
+        out_filepaths = []
+        for fmt in fmts:
+            out_filepath = outdir_path.joinpath(f"{out_fn_no_ext}.{fmt}")
+            if out_filepath.is_file() and not args.overwrite:
+                logger.info(f"Skip existing {out_filepath}, force with --overwrite")
+            else:
+                out_filepaths.append(out_filepath)
+        #
+        if not out_filepaths:
+            return
+
         df, t0_s = read_data(pth, t_range=(args.t1, args.t2))
         if df is None:
             logger.warning(f"Skip processing {pth}")
             continue
-        pth_name_0 = pth.name.rsplit('.', 1)[0]
-        out_fn_no_ext = f"{pth_name_0}{args.suffix}"
         logger.info(f"Exporting {pth}...")
         export_df(df, outdir_path, out_fn_no_ext, fmts, args.overwrite)
 
@@ -265,6 +278,18 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     if out_dirpath is None:
         out_dirpath = data_filepath.parent
 
+    filename = data_filepath.name
+    img_outpaths = []
+    for typ in figure_types:
+        img_outpath = out_dirpath.joinpath(filename.replace(".h5", f".{typ}"))
+        if img_outpath.is_file() and not overwrite:
+            logger.info(f"{LOWER_LEFT_CORNER}Skip existing {img_outpath}, force with --overwrite")
+        else:
+            img_outpaths.append(img_outpath)
+
+    if not img_outpaths:
+        return
+
     if is_opt:
         store = pd.HDFStore(data_filepath)
         t0_s = store.get_storer('TimeWindow').attrs.t_zero
@@ -275,11 +300,10 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     if df is None:
         logger.warning(f"Skip processing {data_filepath}")
         return
-    filename = data_filepath.name
+    #
     fig = plot(df, t0_s, filename)
     fig.tight_layout()
-    for typ in figure_types:
-        img_outpath = out_dirpath.joinpath(filename.replace(".h5", f".{typ}"))
+    for img_outpath in img_outpaths:
         if img_outpath.is_file():
             if overwrite:
                 fig.savefig(img_outpath)
