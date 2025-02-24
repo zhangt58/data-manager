@@ -139,7 +139,7 @@ def convert_tool(call_as_subtool: bool = False, prog: str = None):
                 out_filepaths.append(out_filepath)
         #
         if not out_filepaths:
-            return
+            continue
 
         df, t0_s = read_data(pth, t_range=(args.t1, args.t2))
         if df is None:
