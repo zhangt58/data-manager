@@ -36,16 +36,22 @@ TOOLS = {
 
 _help_msg = """Usage: wf-wave [-h] [-v] {merge,plot,convert} ...
 
-The main tool for BCM/BPM waveform data.
+The main tool for processing the post-mortem BPM/BCM waveform data files.
+
+On each MPS MTCA06 trip event, the waveform data is captured and stored as HDF5 files
+(referred as raw files) by another application. For v0 formatted files, use `merge` tool
+to merge the raw files to a single file based on the MPS fault ID. Use `convert` and `plot`
+tool to convert the merged or v1 formatted raw files to other formats, only clip the data
+around the trip region; generate the images in various types with `plot` tool.
 
 Options:
   -h   Show this help message and exit
   -v   Print out version info
 
 Valid tools:
-  merge      Merge the raw BCM/BPM datasets into one by the MPS fault ID
-  plot       Generate images from the merged BCM/BPM waveform dataset files
-  convert    Convert the merged HDF files to other formats
+  merge      Merge the raw (v0) BCM/BPM datasets into one by the MPS fault ID
+  convert    Convert the merged or raw (v1) HDF5 files to other formats
+  plot       Generate images from the converted BCM/BPM waveform dataset files
 """
 
 def main():
