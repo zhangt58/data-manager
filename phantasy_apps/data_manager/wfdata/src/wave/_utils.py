@@ -10,7 +10,7 @@ import pandas as pd
 
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Union
 from scipy.io import savemat
 
 from ._log import logger
@@ -48,7 +48,7 @@ def read_path(dir_path: Path, file_type: str = "h5",
             r = _PATTERN_NO_FTID.match(pth.name)
             ftid = fault_id
         if r is None:
-            logger.warning(f"Missing MPS fault ID: {pth}")
+            logger.warning(f"Skip {pth}: missing MPS fault ID")
             continue
         if not allow_no_fault_id:
             grp_name, ts1, ts2, ftid = r.groups()
@@ -65,7 +65,7 @@ def read_path(dir_path: Path, file_type: str = "h5",
             time_type, dev_type = (0, "BCM") if grp_name.startswith('BCM') else (0, "BPM")
         records.append((ftid, grp_name, pth.name, ts.timestamp(), time_type, dev_type, pth))
         cnt += 1
-        logger.info(f"[{cnt:3d}] Processed {pth}")
+        logger.debug(f"[{cnt:3d}] Processed {pth}")
 
     df = pd.DataFrame.from_records(
             records,
@@ -79,8 +79,8 @@ def read_path(dir_path: Path, file_type: str = "h5",
 
 
 def group_datafiles(ftid: int, df_grp: pd.DataFrame,
-                    root_dir: str = ".", overwrite: bool = False) -> Path:
-    """ Group rows of datafiles into one.
+                    root_dir: str = ".", overwrite: bool = False) -> Union[Path, None]:
+    """ Group rows of datafiles into one, if skip, return None.
     """
     out_filepath = Path(root_dir).joinpath(f"{ftid}.h5")
 
@@ -88,8 +88,8 @@ def group_datafiles(ftid: int, df_grp: pd.DataFrame,
         if overwrite:
             logger.info(f"Overwriting {out_filepath}...")
         else:
-            logger.info(f"Skip existing {out_filepath}, force with --overwrite")
-            return out_filepath
+            logger.debug(f"Skip existing {out_filepath}, force with --overwrite")
+            return None
 
     out_filepath.parent.mkdir(parents=True, exist_ok=True)
     #

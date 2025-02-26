@@ -25,13 +25,14 @@ LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
 
 
 def merge_tool(call_as_subtool: bool = False, prog: str = None):
-    """ Merge the separated .h5 files for each group/device into one on the MPS fault ID.
+    """ Merge the separated '.h5' files for each group/device into one on the MPS fault ID.
     """
     parser = argparse.ArgumentParser(
                 prog=prog,
-                description="Merge the BCM/BPM datasets into one file by the MPS fault ID.")
+                description="Merge the BCM/BPM datasets into one file by the MPS fault ID. "
+                            "It iterates the .h5' files recursively under the *data_dir*.")
     parser.add_argument("data_dir", default=None, type=str, nargs='?',
-                        help="The directory path of the folder for the original .h5 files.")
+                        help="The directory path of the folder for the original '.h5' files.")
     parser.add_argument("out_dir", default=None, type=str, nargs='?',
                         help="The directory path of the folder for the merged files.")
     parser.add_argument("--overwrite", action="store_true",
@@ -57,8 +58,11 @@ def merge_tool(call_as_subtool: bool = False, prog: str = None):
     df_evts = read_path(Path(args.data_dir))
 
     if args.csv_report is not None:
+        if Path(args.csv_report).is_file():
+            logger.warning(f"Exported table of events info to {args.csv_report} (overwritten)")
+        else:
+            logger.info(f"Exported table of events info to {args.csv_report}")
         df_evts.to_csv(args.csv_report)
-        logger.info(f"Exported table of events info to {args.csv_report}")
 
     for i, (ftid, grp) in enumerate(df_evts.groupby(df_evts.index)):
         try:
@@ -66,7 +70,10 @@ def merge_tool(call_as_subtool: bool = False, prog: str = None):
         except Exception as e:
             logger.warning(f"Error processing {grp.shape[0]} files on MPS fault ID {ftid}: {e}")
         else:
-            logger.info(f"Merged {grp.shape[0]} files on MPS fault ID {ftid}...")
+            if out_filepath is None:
+                logger.debug(f"Skipped merging {grp.shape[0]} file on MPS fault ID {ftid}")
+            else:
+                logger.info(f"Merged {grp.shape[0]} files on MPS fault ID {ftid}")
 
 
 def convert_tool(call_as_subtool: bool = False, prog: str = None):
