@@ -103,6 +103,8 @@ def convert_tool(call_as_subtool: bool = False, prog: str = None):
                         help="The string suffix to the export filename.")
     parser.add_argument("--overwrite", action="store_true",
                         help="Overwrite the existing exported files.")
+    parser.add_argument("--exclude-from", dest="exclude_file",
+                        help="The file contains lines of filenames to exclude processing")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -130,9 +132,20 @@ def convert_tool(call_as_subtool: bool = False, prog: str = None):
         outdir_path.mkdir(parents=True)
         logger.info(f"Created output directory: {outdir_path}")
 
+    # The list of file names to exclude from processing
+    exclude_filenames = []
+    if args.exclude_file is not None:
+        for line in open(args.exclude_file, "r"):
+            if line.startswith("#"):
+                continue
+            exclude_filenames.append(line.strip())
+
     data_filepaths = sorted(set(args.data_filepath))
     for pth_s in data_filepaths:
         pth = Path(pth_s)
+        if pth.name in exclude_filenames:
+            logger.debug(f"Exclude {pth}")
+            continue
         pth_name_0 = pth.name.rsplit('.', 1)[0]
         out_fn_no_ext = f"{pth_name_0}{args.suffix}"
 
@@ -141,7 +154,7 @@ def convert_tool(call_as_subtool: bool = False, prog: str = None):
         for fmt in fmts:
             out_filepath = outdir_path.joinpath(f"{out_fn_no_ext}.{fmt}")
             if out_filepath.is_file() and not args.overwrite:
-                logger.info(f"Skip existing {out_filepath}, force with --overwrite")
+                logger.debug(f"Skip existing {out_filepath}, force with --overwrite")
             else:
                 out_filepaths.append(out_filepath)
         #
@@ -173,7 +186,7 @@ def export_df(df: pd.DataFrame, outdir: Path, out_filename: str,
                 _export_fn_map[fmt](df, out_filepath)
                 logger.info(f"{LOWER_LEFT_CORNER}As {out_filepath} (overwritten)")
             else:
-                logger.info(f"Skip existing {out_filepath}, force with --overwrite")
+                logger.debug(f"Skip existing {out_filepath}, force with --overwrite")
         else:
             _export_fn_map[fmt](df, out_filepath)
             logger.info(f"{LOWER_LEFT_CORNER}As {out_filepath}")
@@ -271,7 +284,6 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         if not pth.is_file():
             logger.warning(f"Not exists: {pth}")
             continue
-        logger.info(f"Generating figure {pth}...")
         gen_figure(pth, img_types, img_outdir_path, is_opt=args.is_opt,
                    overwrite=args.overwrite)
 
@@ -290,7 +302,7 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     for typ in figure_types:
         img_outpath = out_dirpath.joinpath(filename.replace(".h5", f".{typ}"))
         if img_outpath.is_file() and not overwrite:
-            logger.info(f"{LOWER_LEFT_CORNER}Skip existing {img_outpath}, force with --overwrite")
+            logger.debug(f"{LOWER_LEFT_CORNER}Skip existing {img_outpath}, force with --overwrite")
         else:
             img_outpaths.append(img_outpath)
 
@@ -308,6 +320,7 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
         logger.warning(f"Skip processing {data_filepath}")
         return
     #
+    logger.info(f"Generating figure {data_filepath}...")
     fig = plot(df, t0_s, filename)
     fig.tight_layout()
     for img_outpath in img_outpaths:
