@@ -55,20 +55,28 @@ def _process_format_v1(store):
     # BCM
     bcm_grps = df_grp.index[df_grp.index.str.startswith('BCM')]
     bcm_dfs = []
-    for bcm_grp in bcm_grps:
-        # print(f"{bcm_grp} T0: {df_t0[bcm_grp]}")
-        _bcm_df = df_bcm[df_grp[bcm_grp]]
-        _t_idx = pd.date_range(start=df_t0[bcm_grp], periods=_bcm_df.shape[0], freq='us')
-        bcm_dfs.append(_bcm_df.set_index(_t_idx))
+    try:
+        for bcm_grp in bcm_grps:
+            # print(f"{bcm_grp} T0: {df_t0[bcm_grp]}")
+            _bcm_df = df_bcm[df_grp[bcm_grp]]
+            _t_idx = pd.date_range(start=df_t0[bcm_grp], periods=_bcm_df.shape[0], freq='us')
+            bcm_dfs.append(_bcm_df.set_index(_t_idx))
+    except Exception as e:
+        logger.warning(f"Error processing BCM {store.filename}: {e}")
+        return None, None
 
     # BPM
     bpm_grps = df_grp.index[~df_grp.index.str.startswith('BCM')]
     bpm_dfs = []
-    for bpm_grp in bpm_grps:
-        # print(f"{bpm_grp} T0: {df_t0[bpm_grp]}")
-        _bpm_df = df_bpm[df_grp[bpm_grp]]
-        _t_idx = pd.date_range(start=df_t0[bpm_grp], periods=_bpm_df.shape[0], freq='us')
-        bpm_dfs.append(_bpm_df.set_index(_t_idx))
+    try:
+        for bpm_grp in bpm_grps:
+            # print(f"{bpm_grp} T0: {df_t0[bpm_grp]}")
+            _bpm_df = df_bpm[df_grp[bpm_grp]]
+            _t_idx = pd.date_range(start=df_t0[bpm_grp], periods=_bpm_df.shape[0], freq='us')
+            bpm_dfs.append(_bpm_df.set_index(_t_idx))
+    except Exception as e:
+        logger.warning(f"Error processing BPM {store.filename}: {e}")
+        return None, None
     #
     bpm_names = [f"BPM_{i}" for i in bpm_grps]
     #
