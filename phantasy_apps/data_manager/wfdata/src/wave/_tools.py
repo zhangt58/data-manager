@@ -39,11 +39,15 @@ def merge_tool(call_as_subtool: bool = False, prog: str = None):
                         help="Overwrite the existing merged data files.")
     parser.add_argument("--csv-report", dest="csv_report",
                         help="The CSV filepath for writing the processed event report.")
+    parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
+                        help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
     else:
         args = parser.parse_args(sys.argv[1:])
+
+    logger.setLevel(args.log_level)
 
     if args.data_dir is None:
         logger.warning("The directory path of the original data files must be provided.")
@@ -105,11 +109,15 @@ def convert_tool(call_as_subtool: bool = False, prog: str = None):
                         help="Overwrite the existing exported files.")
     parser.add_argument("--exclude-from", dest="exclude_file",
                         help="The file contains lines of filenames to exclude processing")
+    parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
+                        help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
     else:
         args = parser.parse_args(sys.argv[1:])
+
+    logger.setLevel(args.log_level)
 
     if args.outdir is None:
         logger.warning("Output directory must be defined through --outdir.")
@@ -261,11 +269,15 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                         help="If the data_filepaths are optimized .h5 files.")
     parser.add_argument("--overwrite", action="store_true",
                         help="Overwrite the existing image files.")
+    parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
+                        help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
     else:
         args = parser.parse_args(sys.argv[1:])
+
+    logger.setLevel(args.log_level)
 
     if not args.img_types:
         img_types = ("png", )
