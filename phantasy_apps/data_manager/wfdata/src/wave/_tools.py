@@ -3,10 +3,12 @@
 
 import argparse
 import logging
+import math
 import sys
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from datetime import datetime
 from pathlib import Path
 from scipy.io import savemat
 
@@ -18,6 +20,7 @@ from ._data import (
     read_data,
     plot
 )
+from ._tk import FigureWindow
 from ._log import logger
 
 
@@ -271,6 +274,12 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                         help="Overwrite the existing image files.")
     parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
                         help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("-i", "--interactive", action="store_true", dest="user_mode",
+                        help="Enter the user interactive mode, shortcuts image generation.")
+    parser.add_argument("--grid", dest="fig_grid", default=None,
+                        help="Pass nxm as the grid to layout the figures in interactive mode.")
+    parser.add_argument("--nmax-figures", dest="max_nfigs", default=6, type=int,
+                        help="The maximum number of figures to show in interactive mode.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -284,8 +293,40 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
     else:
         img_types = set((t.lower() for t in args.img_types))
 
-    data_filepaths = sorted(set(args.data_filepath))
+    # shortcut image generation
+    if args.user_mode:
+        max_nfigs = args.max_nfigs
+        n_data_filepaths = len(args.data_filepath)
+        if n_data_filepaths > max_nfigs:
+            logger.warning(f"Only process and show the first {max_nfigs} files ({n_data_filepaths}).")
+            n_figs = max_nfigs
+        else:
+            n_figs = n_data_filepaths
+        #
+        fig_with_titles = []
+        for data_filepath in args.data_filepath[:n_figs]:
+            _pth = Path(data_filepath)
+            fig = create_plot(_pth, args.is_opt)
+            fig.canvas.manager.set_window_title(f"Figure {_pth.name}")
+            fig.tight_layout()
+            fig_with_titles.append((fig, _pth.name))
 
+        fig_grid = args.fig_grid
+        if fig_grid is None:
+            nrow = math.floor(math.sqrt(n_figs))
+            ncol = math.ceil(n_figs / nrow)
+        else:
+            nrow, ncol = [int(i) for i in fig_grid.split("x")]
+        # plt.show()
+        _app = FigureWindow(fig_with_titles, "Visualizing the Post-mortem Data with dm-wave",
+                            (nrow, ncol),
+                            notes=f"[{datetime.now().isoformat()[:-3]}] "
+                                  f"Generated with the command: {' '.join(sys.argv)}")
+        _app.mainloop()
+        sys.exit(0)
+
+    # otherwise generating images
+    data_filepaths = sorted(set(args.data_filepath))
     img_outdir_path = args.img_outdir
     if img_outdir_path is not None:
         img_outdir_path = Path(img_outdir_path)
@@ -321,13 +362,7 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     if not img_outpaths:
         return
 
-    if is_opt:
-        store = pd.HDFStore(data_filepath)
-        t0_s = store.get_storer('TimeWindow').attrs.t_zero
-        df = pd.concat([store[k] for k in store.keys()], axis=1)
-        store.close()
-    else:
-        df, t0_s = read_data(data_filepath)
+    df, t0_s = _read_data(data_filepath, is_opt)
     if df is None:
         logger.warning(f"Skip processing {data_filepath}")
         return
@@ -347,6 +382,26 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
             logger.info(f"{LOWER_LEFT_CORNER}As {img_outpath}")
     #
     plt.close(fig)
+
+
+def _read_data(data_filepath: Path, is_opt: bool = False):
+    if is_opt:
+        # read the converted file, smaller size.
+        store = pd.HDFStore(data_filepath)
+        t0_s = store.get_storer('TimeWindow').attrs.t_zero
+        df = pd.concat([store[k] for k in store.keys()], axis=1)
+        store.close()
+    else:
+        # read the merged (v0) or v1 raw file.
+        df, t0_s = read_data(data_filepath)
+    return df, t0_s
+
+
+def create_plot(data_filepath: Path, is_opt: bool = False):
+    """ Create the matplotlib figure object.
+    """
+    df, t0_s = _read_data(data_filepath, is_opt)
+    return plot(df, t0_s, data_filepath.name)
 
 
 if __name__ == "__main__":
