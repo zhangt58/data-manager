@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from functools import partial
+from typing import Union
 
 from ._log import logger
 
@@ -84,7 +85,7 @@ def _process_format_v1(store):
 
 
 def read_data(filepath: str,
-              t_range: tuple[int, int] = (-800, 400)):
+              t_range: Union[tuple[int, int], None] = (-800, 400)):
     """ Read and consolidate dataset.
     """
     with pd.HDFStore(filepath, mode="r") as store:
@@ -129,7 +130,10 @@ def read_data(filepath: str,
     t0_str: str = t0_val.to_pydatetime().isoformat()
 
     # the dataframe-of-interest
-    df = df_all.iloc[t0_idx + t_range[0]:t0_idx + t_range[1], :].copy()
+    if t_range is not None:
+        df = df_all.iloc[t0_idx + t_range[0]:t0_idx + t_range[1], :].copy()
+    else:
+        df = df_all.copy()
     df['t_us'] = (df.index - t0_val) / pd.Timedelta(1, "us")
     # process BPM MAG and PHA columns
     # bpm_cols = store['INFO/PV'].filter(regex=r'(BPM_D[0-9]{4}).*', axis=0)

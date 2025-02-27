@@ -11,6 +11,7 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from scipy.io import savemat
+from typing import Union
 
 from ._utils import (
     read_path,
@@ -280,6 +281,13 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                         help="Pass nxm as the grid to layout the figures in interactive mode.")
     parser.add_argument("--nmax-figures", dest="max_nfigs", default=6, type=int,
                         help="The maximum number of figures to show in interactive mode.")
+    parser.add_argument("--t1", dest="t1", type=int, default=None,
+                       help="The relative start time against t0 in microseconds, "
+                            "t0 is the time when trip event happens.")
+    parser.add_argument("--t2", dest="t2", type=int, default=None,
+                       help="The relative end time against t0 in microseconds, "
+                            "(t1, t2) defines the range of data size trimmed from the merged (v0) "
+                            "or v1 raw data; if none is defined, plot with the whole data.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -292,6 +300,10 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         img_types = ("png", )
     else:
         img_types = set((t.lower() for t in args.img_types))
+
+    t_range = None
+    if args.t1 is not None and args.t2 is not None:
+        t_range = (args.t1, args.t2)
 
     # shortcut image generation
     if args.user_mode:
@@ -306,7 +318,7 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         fig_with_titles = []
         for data_filepath in args.data_filepath[:n_figs]:
             _pth = Path(data_filepath)
-            fig = create_plot(_pth, args.is_opt)
+            fig = create_plot(_pth, args.is_opt, t_range)
             fig.canvas.manager.set_window_title(f"Figure {_pth.name}")
             fig.tight_layout()
             fig_with_titles.append((fig, _pth.name))
@@ -338,11 +350,12 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
             logger.warning(f"Not exists: {pth}")
             continue
         gen_figure(pth, img_types, img_outdir_path, is_opt=args.is_opt,
-                   overwrite=args.overwrite)
+                   t_range=t_range, overwrite=args.overwrite)
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],
                out_dirpath: Path = None, is_opt: bool = False,
+               t_range: Union[None, tuple[int, int]] = None,
                overwrite: bool = False):
     # is_opt: If set, work with the converted data file
     # otherwise, work with the merged file v0 or the new v1 format raw file.
@@ -362,7 +375,7 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     if not img_outpaths:
         return
 
-    df, t0_s = _read_data(data_filepath, is_opt)
+    df, t0_s = _read_data(data_filepath, is_opt, t_range)
     if df is None:
         logger.warning(f"Skip processing {data_filepath}")
         return
@@ -384,7 +397,8 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     plt.close(fig)
 
 
-def _read_data(data_filepath: Path, is_opt: bool = False):
+def _read_data(data_filepath: Path, is_opt: bool = False,
+               t_range: Union[None, tuple[int, int]] = None):
     if is_opt:
         # read the converted file, smaller size.
         store = pd.HDFStore(data_filepath)
@@ -393,14 +407,15 @@ def _read_data(data_filepath: Path, is_opt: bool = False):
         store.close()
     else:
         # read the merged (v0) or v1 raw file.
-        df, t0_s = read_data(data_filepath)
+        df, t0_s = read_data(data_filepath, t_range)
     return df, t0_s
 
 
-def create_plot(data_filepath: Path, is_opt: bool = False):
+def create_plot(data_filepath: Path, is_opt: bool = False,
+                t_range: Union[None, tuple[int, int]] = None):
     """ Create the matplotlib figure object.
     """
-    df, t0_s = _read_data(data_filepath, is_opt)
+    df, t0_s = _read_data(data_filepath, is_opt, t_range)
     return plot(df, t0_s, data_filepath.name)
 
 
