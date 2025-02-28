@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import tkinter as tk
 from tkinter import ttk
+from tkinter.font import Font
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -17,7 +18,7 @@ class FigureWindow(tk.Tk):
         self.title(window_title)
         self.protocol("WM_DELETE_WINDOW", self.quit)
 
-        self.configure_styles()
+        configure_styles(self)
 
         # Create a frame for the figures
         frame = ttk.Frame(self)
@@ -64,40 +65,46 @@ class FigureWindow(tk.Tk):
         tb = NavigationToolbar2Tk(canvas,tb_frame)
         tb.update()
 
-    def configure_styles(self):
-        self.style = ttk.Style()
-        font_family = "Cantarell"
-        font_size = 12
-        # Main frame style
-        self.style.configure("TFrame", background="#f0f0f0")
 
-        # Control frame style
-        self.style.configure("ControlFrame.TFrame", background="#e0e0e0", relief="raised",
-                             borderwidth=1)
+def configure_styles(root: tk.Tk):
+    root.style = ttk.Style()
+    font_family = "Cantarell"
+    font_size = 10
+    # Main frame style
+    root.style.configure("TFrame", background="#f0f0f0")
 
-        # Label frame style
-        self.style.configure("TLabelframe", background="#f0f0f0", relief="groove",
-                             borderwidth=2)
+    # Control frame style
+    root.style.configure("ControlFrame.TFrame", background="#e0e0e0", relief="raised",
+                         borderwidth=1)
 
-        # Label frame label style
-        self.style.configure("TLabelframe.Label", font=(font_family, font_size + 10, "bold"),
-                             foreground="#333333", background="#f0f0f0")
+    # Label frame style
+    root.style.configure("TLabelframe", background="#f0f0f0", relief="groove",
+                         borderwidth=2)
 
-        # Style controls frame
-        self.style.configure("StyleControls.TLabelframe", background="#e8e8e8", relief="ridge",
-                             borderwidth=2)
+    # Label frame label style
+    root.style.configure("TLabelframe.Label", font=(font_family, font_size + 10, "bold"),
+                         foreground="#333333", background="#f0f0f0")
 
-        self.style.configure("StyleControls.TLabelframe.Label", font=(font_family, font_size, "bold"),
-                             foreground="#444444", background="#e8e8e8")
+    # Style controls frame
+    root.style.configure("StyleControls.TLabelframe", background="#e8e8e8", relief="ridge",
+                         borderwidth=2)
 
-        # Label style
-        self.style.configure("TLabel", background="#f0f0f0", font=(font_family, font_size))
+    root.style.configure("StyleControls.TLabelframe.Label", font=(font_family, font_size, "bold"),
+                         foreground="#444444", background="#e8e8e8")
 
-        # Button style
-        self.style.configure("TButton", font=(font_family, font_size))
+    # Label style
+    root.style.configure("TLabel", background="#f0f0f0", font=(font_family, font_size))
 
-        # Combobox style
-        self.style.configure("TCombobox", font=(font_family, font_size))
+    # Button style
+    root.style.configure("TButton", font=(font_family, font_size))
+
+    # Combobox style
+    root.style.configure("TCombobox", font=(font_family, font_size))
+
+    # Treeview
+    font = Font(family=font_family, size=font_size)
+    line_height = font.metrics()['linespace']
+    root.style.configure("Treeview", rowheight=line_height)
 
 
 if __name__ == "__main__":
