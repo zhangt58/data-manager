@@ -2,18 +2,22 @@
 # -*- coding: utf-8 -*-
 
 import csv
+import subprocess
 import tkinter as tk
 from tkinter import ttk, messagebox, PhotoImage
 from pathlib import Path
-from ._tk import configure_styles
+from functools import partial
 
-UNCHKED = u'\N{BALLOT BOX}'
-CHECKED = u'\N{BALLOT BOX WITH CHECK}'
+from ._tk import configure_styles
+from ._log import logger
+
+LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
 
 
 class MainWindow(tk.Tk):
 
     def __init__(self, csv_file: str, imags_dir: str,
+                 data_dirs: list[str],
                  column_widths: dict = None):
         super().__init__()
 
@@ -22,10 +26,10 @@ class MainWindow(tk.Tk):
 
         self.title("MPS Faults")
         self.csv_file = csv_file
-        self.selected_rows = set()
 
         self.data = self.load_csv()
         self.images_dirpath = Path(imags_dir)
+        self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
         self.column_widths = {} if column_widths is None else column_widths
 
         # | ----- | ------- |
@@ -51,19 +55,17 @@ class MainWindow(tk.Tk):
         self.table_frame = table_frame
 
         tree = ttk.Treeview(table_frame,
-                            columns=("Select", *(self.data[0])),
-                            show="headings")
+                            columns=self.data[0],
+                            show="headings", selectmode="browse")
         tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         self.tree = tree
 
         # column headers
-        tree.heading("Select", text="")
-        tree.column("Select", width=50)
         for i, header in enumerate(self.data[0]):
-            tree.heading(i + 1, text=header)
+            tree.heading(i, text=header)
             col_w = self.column_widths.get(header, None)
             if col_w is not None:
-                print(f"Set {header} width to {col_w}")
+                logger.warning(f"Set {header} width to {col_w}")
                 tree.column(header, width=col_w)
 
         # tag-wised style
@@ -76,28 +78,22 @@ class MainWindow(tk.Tk):
                 _tag = "mtac06"
             else:
                 _tag = "non-mtca06"
-            tree.insert("", tk.END, iid=i, values=("", *row), tags=(_tag, ))
-            tree.set(i, "Select", UNCHKED)
+            tree.insert("", tk.END, iid=i, values=row, tags=(_tag, ))
 
-        tree.bind("<Button-1>", self.on_check_row)
         tree.bind("<<TreeviewSelect>>", self.on_select_row)
 
         #
         bottom_frame = ttk.Frame(table_frame)
         bottom_frame.pack(fill=tk.X, padx=10, pady=10)
 
-        unchk_all_btn = ttk.Button(bottom_frame, text=f"Clear {CHECKED}", command=self.on_unchk_all)
-        unchk_all_btn.pack(side=tk.LEFT, padx=5)
+        last_valid_sel_lbl = ttk.Label(bottom_frame)
+        last_valid_sel_lbl.pack(side=tk.LEFT, padx=10)
+        self.last_valid_sel_lbl = last_valid_sel_lbl
 
-#        chk_all_btn = ttk.Button(bottom_frame, text=f"{CHECKED} ALL", command=self.on_chk_all)
-#        chk_all_btn.pack(side=tk.LEFT, padx=10)
-
-        sts_lbl = ttk.Label(bottom_frame, text="# of Checked Events: 0")
-        sts_lbl.pack(side=tk.LEFT, padx=10)
-        self.sts_lbl = sts_lbl
-
-        open_btn = ttk.Button(bottom_frame, text="Open", command=self.on_open)
+        open_btn = ttk.Button(bottom_frame, text="Open Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=10)
+        open1_btn = ttk.Button(bottom_frame, text="Open Raw", command=partial(self.on_open, False))
+        open1_btn.pack(side=tk.RIGHT, padx=10)
 
     def create_preview_panel(self):
         self.preview_frame = ttk.Frame(self)
@@ -107,37 +103,8 @@ class MainWindow(tk.Tk):
         self.image_lbl.pack(fill=tk.BOTH, expand=True)
         self.preview_image = None
         self.preview_img_filepath = None
+        self.preview_img_ftid = None
         self.update_preview()
-
-    def on_unchk_all(self):
-        """ Mark all unchecked.
-        """
-        self.selected_rows.clear()
-        for row in self.tree.get_children():
-            self.tree.set(row, "Select", UNCHKED)
-        self._update_checked_sts()
-
-#    def on_chk_all(self):
-#        """ Make all checked.
-#        """
-#        for row in self.tree.get_children():
-#            self.selected_rows.add(row)
-#            self.tree.set(row, "Select", CHECKED)
-#        self._update_checked_sts()
-
-    def on_check_row(self, evt):
-        region = self.tree.identify_region(evt.x, evt.y)
-        if region == "cell":
-            column = self.tree.identify_column(evt.x)
-            row = self.tree.identify_row(evt.y)
-            if column == "#1":
-                if row in self.selected_rows:
-                    self.selected_rows.remove(row)
-                    self.tree.set(row, "Select", UNCHKED)
-                else:
-                    self.selected_rows.add(row)
-                    self.tree.set(row, "Select", CHECKED)
-                self._update_checked_sts()
 
     def on_select_row(self, evt):
         _row = self.tree.selection()
@@ -145,35 +112,48 @@ class MainWindow(tk.Tk):
             items = self.tree.item(_row, "values")
             # show the figure if available
             self.display_figure(items)
+            logger.debug(f"Selected {_row}: {items}, {self.data[int(_row[0]) + 1]}")
 
-    def on_open(self):
-        if not self.selected_rows:
-            messagebox.showinfo("Info", "No events checked!")
+    def on_open(self, is_opt: bool):
+        # find the data files
+        if self.preview_img_ftid is None:
             return
-        print(self.selected_rows)
+
+        data_path = self.find_data_path(self.preview_img_ftid, is_opt)
+        if data_path is not None:
+            # call plot tool
+            cmdline = f"dm-wave plot -opt -i {data_path}" if is_opt else \
+                      f"dm-wave plot -i {data_path}"
+            subprocess.Popen(cmdline, shell=True)
+
+    def find_data_path(self, ftid: int, is_opt: bool = True) -> Path:
+        glob_pattern = f"{ftid}_opt.h5" if is_opt else f"*{ftid}.h5"
+        for d in self.data_dirs:
+            for pth in d.rglob(glob_pattern):
+                if pth.is_file():
+                    return pth
+        return None
 
     def update_preview(self):
         self.image_lbl.config(image=self.preview_image)
         self.image_lbl.config(text=self.preview_img_filepath)
 
     def display_figure(self, row):
-        ftid: str = row[1]
+        ftid: str = row[0]
         img_filename = f"{ftid}_opt.png"
         img_filepath = self.images_dirpath.joinpath(img_filename)
         if img_filepath.is_file():
             self.preview_image = PhotoImage(file=img_filepath)
             self.preview_img_filepath = img_filepath
+            self.preview_img_ftid = int(ftid)
             self.update_preview()
+            self.last_valid_sel_lbl.config(text=f"Last previewed event: {self.preview_img_ftid}")
         else:
-            self.image_lbl.config(image='')
-            self.image_lbl.config(text="Error: Image is not available!")
-
-    def _update_checked_sts(self):
-        self.sts_lbl.config(text=f"# of Checked Events: {len(self.selected_rows)}")
+            pass
 
 
-def main(mps_faults_path: str, images_dir: str, **kws):
-    app = MainWindow(mps_faults_path, images_dir,
+def main(mps_faults_path: str, images_dir: str, data_dirs: list[str], **kws):
+    app = MainWindow(mps_faults_path, images_dir, data_dirs,
                      column_widths=kws)
     app.minsize(width=1200, height=900)
     app.mainloop()

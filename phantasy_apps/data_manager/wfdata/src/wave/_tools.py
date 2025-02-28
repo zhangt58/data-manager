@@ -364,13 +364,13 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="The filepath of the MPS faults event data.")
     parser.add_argument("images_dir", type=str,
                         help="The directory path of the processed images.")
+    parser.add_argument("--data-dir", action="append", dest="data_dirs",
+                        help="The directory path for either the optimized, merged or raw data files.")
     parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
                         help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
-
     args = parser.parse_args(sys.argv[2:])
     logger.setLevel(args.log_level)
-    run_viewer(args.mps_faults_file, args.images_dir)
-
+    run_viewer(args.mps_faults_file, args.images_dir, args.data_dirs)
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],
