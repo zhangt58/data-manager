@@ -6,7 +6,8 @@ import sys
 from ._tools import (
     convert_tool,
     merge_tool,
-    plot_tool
+    plot_tool,
+    view_tool,
 )
 
 from ._utils import (
@@ -30,7 +31,8 @@ __title__ = "DataManager: Manage the Accelerator Data"
 TOOLS = {
     'merge': merge_tool,
     'plot': plot_tool,
-    'convert': convert_tool
+    'convert': convert_tool,
+    'view': view_tool
 }
 
 
@@ -44,6 +46,8 @@ to merge the raw files to a single file based on the MPS fault ID. Use `convert`
 tool to convert the merged or v1 formatted raw files to other formats, only clip the data
 around the trip region; generate the images in various types with `plot` tool.
 
+`view` tool provides the GUI and interactively view the data in images.
+
 Options:
   -h   Show this help message and exit
   -v   Print out version info
@@ -52,6 +56,7 @@ Valid tools:
   merge      Merge the raw (v0) BCM/BPM datasets into one by the MPS fault ID
   convert    Convert the merged or raw (v1) HDF5 files to other formats
   plot       Generate images from the converted BCM/BPM waveform dataset files
+  view       GUI app for view data and images
 """
 
 def main():

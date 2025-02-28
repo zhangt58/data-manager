@@ -22,6 +22,7 @@ from ._data import (
     plot
 )
 from ._tk import FigureWindow
+from ._viewer import main as run_viewer
 from ._log import logger
 
 
@@ -351,6 +352,25 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
             continue
         gen_figure(pth, img_types, img_outdir_path, is_opt=args.is_opt,
                    t_range=t_range, overwrite=args.overwrite)
+
+
+def view_tool(call_as_subtool: bool = True, prog: str = None):
+    """ Launch the GUI app to view MPS faults and the waveform data.
+    """
+    parser = argparse.ArgumentParser(
+                prog=prog,
+                description="Launch the GUI app for view the data along with MPS fault events.")
+    parser.add_argument("mps_faults_file", type=str,
+                        help="The filepath of the MPS faults event data.")
+    parser.add_argument("images_dir", type=str,
+                        help="The directory path of the processed images.")
+    parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
+                        help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
+
+    args = parser.parse_args(sys.argv[2:])
+    logger.setLevel(args.log_level)
+    run_viewer(args.mps_faults_file, args.images_dir)
+
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],

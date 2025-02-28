@@ -5,7 +5,7 @@ import csv
 import tkinter as tk
 from tkinter import ttk, messagebox, PhotoImage
 from pathlib import Path
-from _tk import configure_styles
+from ._tk import configure_styles
 
 UNCHKED = u'\N{BALLOT BOX}'
 CHECKED = u'\N{BALLOT BOX WITH CHECK}'
@@ -36,7 +36,6 @@ class MainWindow(tk.Tk):
         # | ----- | ------- |
         # | Table | preview |
         # | ----- | ------- |
-        #
         #
         self.create_table_panel()
         self.create_preview_panel()
@@ -92,11 +91,11 @@ class MainWindow(tk.Tk):
         bottom_frame = ttk.Frame(table_frame)
         bottom_frame.pack(fill=tk.X, padx=10, pady=10)
 
-        unchk_all_btn = ttk.Button(bottom_frame, text=f"{UNCHKED} ALL", command=self.on_unchk_all)
-        unchk_all_btn.pack(side=tk.LEFT, padx=5)
+#        unchk_all_btn = ttk.Button(bottom_frame, text=f"{UNCHKED} ALL", command=self.on_unchk_all)
+#        unchk_all_btn.pack(side=tk.LEFT, padx=5)
 
-        chk_all_btn = ttk.Button(bottom_frame, text=f"{CHECKED} ALL", command=self.on_chk_all)
-        chk_all_btn.pack(side=tk.LEFT, padx=10)
+#        chk_all_btn = ttk.Button(bottom_frame, text=f"{CHECKED} ALL", command=self.on_chk_all)
+#        chk_all_btn.pack(side=tk.LEFT, padx=10)
 
         sts_lbl = ttk.Label(bottom_frame, text="Selected Rows: 0")
         sts_lbl.pack(side=tk.LEFT, padx=10)
@@ -114,21 +113,21 @@ class MainWindow(tk.Tk):
         self.preview_image = None
         self.update_preview()
 
-    def on_unchk_all(self):
-        """ Mark all unchecked.
-        """
-        self.selected_rows.clear()
-        for row in self.tree.get_children():
-            self.tree.set(row, "Select", UNCHKED)
-        self._update_checked_sts()
+#    def on_unchk_all(self):
+#        """ Mark all unchecked.
+#        """
+#        self.selected_rows.clear()
+#        for row in self.tree.get_children():
+#            self.tree.set(row, "Select", UNCHKED)
+#        self._update_checked_sts()
 
-    def on_chk_all(self):
-        """ Make all checked.
-        """
-        for row in self.tree.get_children():
-            self.selected_rows.add(row)
-            self.tree.set(row, "Select", CHECKED)
-        self._update_checked_sts()
+#    def on_chk_all(self):
+#        """ Make all checked.
+#        """
+#        for row in self.tree.get_children():
+#            self.selected_rows.add(row)
+#            self.tree.set(row, "Select", CHECKED)
+#        self._update_checked_sts()
 
     def on_check_row(self, evt):
         region = self.tree.identify_region(evt.x, evt.y)
@@ -179,16 +178,21 @@ class MainWindow(tk.Tk):
         self.sts_lbl.config(text=f"Selected Rows: {len(self.selected_rows)}")
 
 
+def main(mps_faults_path: str, images_dir: str, **kws):
+    app = MainWindow(mps_faults_path, images_dir,
+                     column_widths=kws)
+    app.minsize(width=1200, height=900)
+    app.mainloop()
+
+
 if __name__ == "__main__":
     csv_file = "./MPS-faults.csv"
     images_dir = "/home/tong/tools/wfdata/final/images"
 
-    app = MainWindow(csv_file, images_dir,
-                     column_widths={
-                         'Fault_ID': 100, 'Time': 200, 'Power': 100,
-                         'Destination': 150,
-                         'Ion': 80, 'Type': 100,
-                         'Description': 200
-                     })
-    app.minsize(width=1200, height=900)
-    app.mainloop()
+    column_widths={
+        'Fault_ID': 100, 'Time': 200, 'Power': 100,
+        'Destination': 150,
+        'Ion': 80, 'Type': 100,
+        'Description': 200
+    }
+    main(csv_file, images_dir, **column_widths)
