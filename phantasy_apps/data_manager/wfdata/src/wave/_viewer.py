@@ -17,11 +17,6 @@ class MainWindow(tk.Tk):
                  column_widths: dict = None):
         super().__init__()
 
-        # scaling
-        print(self.tk.call('tk', 'scaling'))
-        self.tk.call('tk', 'scaling', 1.0)
-        print(self.tk.call('tk', 'scaling'))
-
         # styles
         configure_styles(self)
 
@@ -91,13 +86,13 @@ class MainWindow(tk.Tk):
         bottom_frame = ttk.Frame(table_frame)
         bottom_frame.pack(fill=tk.X, padx=10, pady=10)
 
-#        unchk_all_btn = ttk.Button(bottom_frame, text=f"{UNCHKED} ALL", command=self.on_unchk_all)
-#        unchk_all_btn.pack(side=tk.LEFT, padx=5)
+        unchk_all_btn = ttk.Button(bottom_frame, text=f"Clear {CHECKED}", command=self.on_unchk_all)
+        unchk_all_btn.pack(side=tk.LEFT, padx=5)
 
 #        chk_all_btn = ttk.Button(bottom_frame, text=f"{CHECKED} ALL", command=self.on_chk_all)
 #        chk_all_btn.pack(side=tk.LEFT, padx=10)
 
-        sts_lbl = ttk.Label(bottom_frame, text="Selected Rows: 0")
+        sts_lbl = ttk.Label(bottom_frame, text="# of Checked Events: 0")
         sts_lbl.pack(side=tk.LEFT, padx=10)
         self.sts_lbl = sts_lbl
 
@@ -111,15 +106,16 @@ class MainWindow(tk.Tk):
         self.image_lbl = ttk.Label(self.preview_frame)
         self.image_lbl.pack(fill=tk.BOTH, expand=True)
         self.preview_image = None
+        self.preview_img_filepath = None
         self.update_preview()
 
-#    def on_unchk_all(self):
-#        """ Mark all unchecked.
-#        """
-#        self.selected_rows.clear()
-#        for row in self.tree.get_children():
-#            self.tree.set(row, "Select", UNCHKED)
-#        self._update_checked_sts()
+    def on_unchk_all(self):
+        """ Mark all unchecked.
+        """
+        self.selected_rows.clear()
+        for row in self.tree.get_children():
+            self.tree.set(row, "Select", UNCHKED)
+        self._update_checked_sts()
 
 #    def on_chk_all(self):
 #        """ Make all checked.
@@ -152,30 +148,28 @@ class MainWindow(tk.Tk):
 
     def on_open(self):
         if not self.selected_rows:
-            messagebox.showinfo("Info", "No rows selected!")
+            messagebox.showinfo("Info", "No events checked!")
             return
         print(self.selected_rows)
 
     def update_preview(self):
-        if self.preview_image is not None:
-            self.image_lbl.config(image=self.preview_image)
-        else:
-            pass
-            # self.image_lbl.config(text="Error: Image is not available!")
+        self.image_lbl.config(image=self.preview_image)
+        self.image_lbl.config(text=self.preview_img_filepath)
 
     def display_figure(self, row):
         ftid: str = row[1]
         img_filename = f"{ftid}_opt.png"
         img_filepath = self.images_dirpath.joinpath(img_filename)
         if img_filepath.is_file():
-            # print(f"Show {img_filepath}")
             self.preview_image = PhotoImage(file=img_filepath)
+            self.preview_img_filepath = img_filepath
             self.update_preview()
         else:
-            pass
+            self.image_lbl.config(image='')
+            self.image_lbl.config(text="Error: Image is not available!")
 
     def _update_checked_sts(self):
-        self.sts_lbl.config(text=f"Selected Rows: {len(self.selected_rows)}")
+        self.sts_lbl.config(text=f"# of Checked Events: {len(self.selected_rows)}")
 
 
 def main(mps_faults_path: str, images_dir: str, **kws):
