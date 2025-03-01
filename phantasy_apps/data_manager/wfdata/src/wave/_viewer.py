@@ -24,7 +24,7 @@ class MainWindow(tk.Tk):
         # styles
         configure_styles(self)
 
-        self.title("MPS Faults")
+        self.title("Post-mortem Data Viewer on MPS Faults")
         self.csv_file = csv_file
 
         self.data = self.load_csv()
@@ -147,7 +147,7 @@ class MainWindow(tk.Tk):
             self.preview_img_filepath = img_filepath
             self.preview_img_ftid = int(ftid)
             self.update_preview()
-            self.last_valid_sel_lbl.config(text=f"Last previewed event: {self.preview_img_ftid}")
+            self.last_valid_sel_lbl.config(text=f"Event on Preview: {self.preview_img_ftid}")
         else:
             pass
 
