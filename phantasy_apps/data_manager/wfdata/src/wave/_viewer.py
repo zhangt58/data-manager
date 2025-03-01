@@ -57,8 +57,14 @@ class MainWindow(tk.Tk):
         tree = ttk.Treeview(table_frame,
                             columns=self.data[0],
                             show="headings", selectmode="browse")
-        tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         self.tree = tree
+
+        # scrollbars
+        v_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=v_scroll.set)
+        v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        #
+        tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # column headers
         for i, header in enumerate(self.data[0]):
