@@ -24,10 +24,13 @@ class MainWindow(tk.Tk):
         # styles
         configure_styles(self)
 
+        #  window title
         self.title("Post-mortem Data Viewer on MPS Faults")
-        self.csv_file = csv_file
 
-        self.data = self.load_csv()
+        # read the data for the table
+        self.csv_file = csv_file
+        self.data = self.read_data()
+        #
         self.images_dirpath = Path(imags_dir)
         self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
         self.column_widths = {} if column_widths is None else column_widths
@@ -39,7 +42,9 @@ class MainWindow(tk.Tk):
         self.create_table_panel()
         self.create_preview_panel()
 
-    def load_csv(self):
+    def read_data(self) -> list:
+        """ Read a list or rows data from *csv_file*.
+        """
         data = []
         with open(self.csv_file, mode="r", newline="", encoding="utf-8") as fp:
             reader = csv.reader(fp, delimiter=";")
@@ -78,15 +83,10 @@ class MainWindow(tk.Tk):
         tree.tag_configure("mtca06", foreground="black")
         tree.tag_configure("non-mtca06", foreground="gray")
 
-        # table data
-        for i, row in enumerate(self.data[1:]):
-            if row[-1] == "MTCA06":
-                _tag = "mtac06"
-            else:
-                _tag = "non-mtca06"
-            tree.insert("", tk.END, iid=i, values=row, tags=(_tag, ))
-
         tree.bind("<<TreeviewSelect>>", self.on_select_row)
+
+        # table data
+        self.present_table_data()
 
         #
         bottom_frame = ttk.Frame(table_frame)
@@ -96,6 +96,13 @@ class MainWindow(tk.Tk):
         last_valid_sel_lbl.pack(side=tk.LEFT, padx=10)
         self.last_valid_sel_lbl = last_valid_sel_lbl
 
+        #
+        reload_btn = ttk.Button(bottom_frame, text="Reload", command=self.on_reload)
+        reload_btn.pack(side=tk.LEFT, padx=10)
+        #
+        filter_reload_btn = ttk.Button(bottom_frame, text="MTCA06", command=self.on_filter_reload)
+        filter_reload_btn.pack(side=tk.LEFT, padx=10)
+        #
         open_btn = ttk.Button(bottom_frame, text="Open Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=10)
         open1_btn = ttk.Button(bottom_frame, text="Open Raw", command=partial(self.on_open, False))
@@ -119,6 +126,19 @@ class MainWindow(tk.Tk):
             # show the figure if available
             self.display_figure(items)
             logger.debug(f"Selected {_row}: {items}, {self.data[int(_row[0]) + 1]}")
+
+    def on_reload(self):
+        """ Reload the MPS faults table.
+        """
+        self.refresh_table_data()
+
+    def on_filter_reload(self):
+        """ Reload with the only MTCA06 events.
+        """
+        self.data = self.read_data()
+        self.data = [l for l in self.data if "MTCA06" in l[-1]]
+        self.tree.delete(*self.tree.get_children())
+        self.present_table_data()
 
     def on_open(self, is_opt: bool):
         # find the data files
@@ -156,6 +176,23 @@ class MainWindow(tk.Tk):
             self.last_valid_sel_lbl.config(text=f"Event on Preview: {self.preview_img_ftid}")
         else:
             pass
+
+    def present_table_data(self):
+        """ Present the data to the table.
+        """
+        for i, row in enumerate(self.data[1:]):
+            if row[-1] == "MTCA06":
+                _tag = "mtac06"
+            else:
+                _tag = "non-mtca06"
+            self.tree.insert("", tk.END, iid=i, values=row, tags=(_tag, ))
+
+    def refresh_table_data(self):
+        """ Re-read the data and refresh the table.
+        """
+        self.data = self.read_data()
+        self.tree.delete(*self.tree.get_children())
+        self.present_table_data()
 
 
 def main(mps_faults_path: str, images_dir: str, data_dirs: list[str], **kws):
