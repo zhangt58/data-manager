@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, PhotoImage
 from pathlib import Path
 from functools import partial
+from typing import Union
 
 from ._tk import configure_styles
 from ._log import logger
@@ -42,14 +43,20 @@ class MainWindow(tk.Tk):
         self.create_table_panel()
         self.create_preview_panel()
 
-    def read_data(self) -> list:
+    def read_data(self, filter: Union[str, None] = None) -> list:
         """ Read a list or rows data from *csv_file*.
+        # filter the last column (Description)
         """
         data = []
         with open(self.csv_file, mode="r", newline="", encoding="utf-8") as fp:
             reader = csv.reader(fp, delimiter=";")
-            for row in reader:
-                data.append(row)
+            if filter is None:
+                for row in reader:
+                    data.append(row)
+            else:
+                for row in reader:
+                    if filter in row[-1]:
+                        data.append(row)
         return data
 
     def create_table_panel(self):
@@ -97,11 +104,13 @@ class MainWindow(tk.Tk):
         self.last_valid_sel_lbl = last_valid_sel_lbl
 
         #
-        reload_btn = ttk.Button(bottom_frame, text="Reload", command=self.on_reload)
-        reload_btn.pack(side=tk.LEFT, padx=10)
+        reload_all_btn = ttk.Button(bottom_frame, text="Reload All",
+                                    command=partial(self.on_reload, None))
+        reload_all_btn.pack(side=tk.LEFT, padx=10)
         #
-        filter_reload_btn = ttk.Button(bottom_frame, text="MTCA06", command=self.on_filter_reload)
-        filter_reload_btn.pack(side=tk.LEFT, padx=10)
+        reload_mtca_btn = ttk.Button(bottom_frame, text="MTCA06",
+                                     command=partial(self.on_reload, "MTCA06"))
+        reload_mtca_btn.pack(side=tk.LEFT, padx=10)
         #
         open_btn = ttk.Button(bottom_frame, text="Open Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=10)
@@ -127,18 +136,10 @@ class MainWindow(tk.Tk):
             self.display_figure(items)
             logger.debug(f"Selected {_row}: {items}, {self.data[int(_row[0]) + 1]}")
 
-    def on_reload(self):
+    def on_reload(self, filter: Union[str, None] = None):
         """ Reload the MPS faults table.
         """
-        self.refresh_table_data()
-
-    def on_filter_reload(self):
-        """ Reload with the only MTCA06 events.
-        """
-        self.data = self.read_data()
-        self.data = [l for l in self.data if "MTCA06" in l[-1]]
-        self.tree.delete(*self.tree.get_children())
-        self.present_table_data()
+        self.refresh_table_data(filter)
 
     def on_open(self, is_opt: bool):
         # find the data files
@@ -187,10 +188,10 @@ class MainWindow(tk.Tk):
                 _tag = "non-mtca06"
             self.tree.insert("", tk.END, iid=i, values=row, tags=(_tag, ))
 
-    def refresh_table_data(self):
+    def refresh_table_data(self, filter: Union[str, None] = None):
         """ Re-read the data and refresh the table.
         """
-        self.data = self.read_data()
+        self.data = self.read_data(filter)
         self.tree.delete(*self.tree.get_children())
         self.present_table_data()
 
