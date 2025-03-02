@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import json
 import logging
 import math
 import sys
@@ -373,9 +374,13 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--fig-dpi", dest="fig_dpi", type=int,
                         help="Override the figure DPI setting in interactive mode.")
+    parser.add_argument("--column-widths", dest="col_widths", type=json.loads, default="{}",
+                        help="JSON string for the column widths of the tree view.")
+
     args = parser.parse_args(sys.argv[2:])
     logger.setLevel(args.log_level)
-    run_viewer(args.mps_faults_file, args.images_dir, args.data_dirs, args.fig_dpi)
+    run_viewer(args.mps_faults_file, args.images_dir, args.data_dirs, args.fig_dpi,
+               **args.col_widths)
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],
