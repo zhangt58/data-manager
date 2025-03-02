@@ -9,10 +9,12 @@ from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 
 
 class FigureWindow(tk.Tk):
-    # Present figures in a Tkinter GUI
+    # Present figures in a Tkinter GUI,
+    # keywords: fig_dpi
     def __init__(self, figures: list[tuple],
                  window_title: str, grid: tuple[int, int],
-                 padx: int = 5, pady: int = 5, notes: str = ""):
+                 padx: int = 5, pady: int = 5, notes: str = "",
+                 **kws):
         super().__init__()
 
         self.title(window_title)
@@ -33,7 +35,8 @@ class FigureWindow(tk.Tk):
         # layout figures
         for i, (fig, fig_title) in enumerate(figures):
             irow, icol = i // ncols, i % ncols
-            self.place_figure(frame, fig, fig_title, irow, icol, padx, pady)
+            self.place_figure(frame, fig, fig_title, irow, icol, padx, pady,
+                              fig_dpi=kws.get('fig_dpi', None))
 
         # bottom area
         bottom_frame = ttk.Frame(self)
@@ -49,13 +52,17 @@ class FigureWindow(tk.Tk):
         quit_btn.pack(side="right", fill=tk.X, pady=pady, padx=padx)
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
-                     padx: int = 5, pady: int = 5):
+                     padx: int = 5, pady: int = 5, fig_dpi: int = None):
         frame = ttk.LabelFrame(parent, text=title)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")
 
         fig_frame = ttk.Frame(frame)
         fig_frame.pack(fill=tk.BOTH, expand=True)
 
+        # change figure dpi
+        if fig_dpi is not None:
+            figure.set_dpi(fig_dpi)
+        #
         canvas = FigureCanvasTkAgg(figure, master=fig_frame)
         canvas.draw_idle()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)

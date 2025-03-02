@@ -18,7 +18,7 @@ LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
 class MainWindow(tk.Tk):
 
     def __init__(self, csv_file: str, imags_dir: str,
-                 data_dirs: list[str],
+                 data_dirs: list[str], fig_dpi: Union[int, None] = None,
                  column_widths: dict = None):
         super().__init__()
 
@@ -35,6 +35,7 @@ class MainWindow(tk.Tk):
         self.images_dirpath = Path(imags_dir)
         self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
         self.column_widths = {} if column_widths is None else column_widths
+        self.fig_dpi= fig_dpi
 
         # | ----- | ------- |
         # | Table | preview |
@@ -153,6 +154,8 @@ class MainWindow(tk.Tk):
             # call plot tool
             cmdline = f"dm-wave plot -opt -i {data_path}" if is_opt else \
                       f"dm-wave plot -i {data_path}"
+            if self.fig_dpi is not None:
+                cmdline += f" --fig-dpi {self.fig_dpi}"
             subprocess.Popen(cmdline, shell=True)
 
     def find_data_path(self, ftid: int, is_opt: bool = True) -> Path:
@@ -198,8 +201,9 @@ class MainWindow(tk.Tk):
         self.present_table_data()
 
 
-def main(mps_faults_path: str, images_dir: str, data_dirs: list[str], **kws):
-    app = MainWindow(mps_faults_path, images_dir, data_dirs,
+def main(mps_faults_path: str, images_dir: str, data_dirs: list[str],
+         fig_dpi: Union[int, None] = None, **kws):
+    app = MainWindow(mps_faults_path, images_dir, data_dirs, fig_dpi,
                      column_widths=kws)
     app.minsize(width=1200, height=900)
     app.mainloop()

@@ -289,6 +289,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                        help="The relative end time against t0 in microseconds, "
                             "(t1, t2) defines the range of data size trimmed from the merged (v0) "
                             "or v1 raw data; if none is defined, plot with the whole data.")
+    parser.add_argument("--fig-dpi", dest="fig_dpi", type=int,
+                        help="Override the figure DPI setting.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -334,7 +336,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         _app = FigureWindow(fig_with_titles, "Visualizing the Post-mortem Data with dm-wave",
                             (nrow, ncol),
                             notes=f"[{datetime.now().isoformat()[:-3]}] "
-                                  f"Generated with the command: {' '.join(sys.argv)}")
+                                  f"Generated with the command: {' '.join(sys.argv)}",
+                            fig_dpi=args.fig_dpi)
         _app.mainloop()
         sys.exit(0)
 
@@ -368,9 +371,11 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="The directory path for either the optimized, merged or raw data files.")
     parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
                         help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--fig-dpi", dest="fig_dpi", type=int,
+                        help="Override the figure DPI setting in interactive mode.")
     args = parser.parse_args(sys.argv[2:])
     logger.setLevel(args.log_level)
-    run_viewer(args.mps_faults_file, args.images_dir, args.data_dirs)
+    run_viewer(args.mps_faults_file, args.images_dir, args.data_dirs, args.fig_dpi)
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],
