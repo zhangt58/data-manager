@@ -62,17 +62,19 @@ class MainWindow(tk.Tk):
     def create_table_panel(self):
         """ Create the table for MPS faults data
         """
-        table_frame = ttk.Frame(self)
-        table_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.table_frame = table_frame
+        left_panel = ttk.Frame(self)
+        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.left_panel = left_panel
 
-        tree = ttk.Treeview(table_frame,
+        tree_frame = ttk.Frame(left_panel)
+        tree_frame.pack(fill=tk.BOTH, expand=True)
+        tree = ttk.Treeview(tree_frame,
                             columns=self.data[0],
                             show="headings", selectmode="browse")
         self.tree = tree
 
         # scrollbars
-        v_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        v_scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=v_scroll.set)
         v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         #
@@ -96,8 +98,8 @@ class MainWindow(tk.Tk):
         self.present_table_data()
 
         #
-        bottom_frame = ttk.Frame(table_frame)
-        bottom_frame.pack(fill=tk.X, padx=10, pady=10)
+        bottom_frame = ttk.Frame(left_panel)
+        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
 
         last_valid_sel_lbl = ttk.Label(bottom_frame)
         last_valid_sel_lbl.pack(side=tk.LEFT, padx=10)
