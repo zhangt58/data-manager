@@ -63,6 +63,10 @@ class MainWindow(tk.Tk):
     def create_table_panel(self):
         """ Create the table for MPS faults data
         """
+        #
+        # | tree frame
+        # | bottom frame
+        #
         left_panel = ttk.Frame(self)
         left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.left_panel = left_panel
@@ -98,22 +102,24 @@ class MainWindow(tk.Tk):
         # table data
         self.present_table_data()
 
-        #
+        # The widgets below the tree_frame
         bottom_frame = ttk.Frame(left_panel)
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
-
-        last_valid_sel_lbl = ttk.Label(bottom_frame)
-        last_valid_sel_lbl.pack(side=tk.LEFT, padx=10)
-        self.last_valid_sel_lbl = last_valid_sel_lbl
 
         #
         reload_all_btn = ttk.Button(bottom_frame, text="Reload All",
                                     command=partial(self.on_reload, None))
-        reload_all_btn.pack(side=tk.LEFT, padx=10)
+        reload_all_btn.pack(side=tk.LEFT)
         #
         reload_mtca_btn = ttk.Button(bottom_frame, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
         reload_mtca_btn.pack(side=tk.LEFT, padx=10)
+
+        #
+        last_valid_sel_lbl = ttk.Label(bottom_frame)
+        last_valid_sel_lbl.pack(side=tk.LEFT, padx=10)
+        self.last_valid_sel_lbl = last_valid_sel_lbl
+
         #
         open_btn = ttk.Button(bottom_frame, text="Open Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=10)
