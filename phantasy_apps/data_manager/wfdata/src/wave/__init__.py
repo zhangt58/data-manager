@@ -9,22 +9,22 @@ from ._tools import (
     plot_tool,
     view_tool,
 )
-
 from ._utils import (
     group_datafiles,
     read_path,
 )
-
 from ._data import (
     plot,
     read_data,
 )
+from ._ver import _version
+
 
 __authors__ = "Tong Zhang"
 __copyright__ = "(c) 2025, Facility for Rare Isotope Beams," \
                 " Michigan State University"
 __contact__ = "Tong Zhang <zhangt@frib.msu.edu>"
-__version__ = '0.7.0'
+__version__ = _version
 __title__ = "DataManager: Manage the Accelerator Data"
 
 
