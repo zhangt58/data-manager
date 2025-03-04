@@ -46,6 +46,8 @@ class MainWindow(tk.Tk):
         self.info_var.set(DEFAULT_INFO_STRING)
         self.preview_info_var = tk.StringVar()
         self.preview_info_var.set("")
+        self.nrecords_var = tk.StringVar()
+        self.nrecords_var.set(f"{0:>4d} in total")
 
         # | ----- | ------- |
         # | Table | preview |
@@ -69,7 +71,7 @@ class MainWindow(tk.Tk):
                     "devices": "Devices",
                     "t window": "T Window",
                     "threshold": "Threshold",
-                    }), on="Fault_ID", how="inner")
+                    }), on="Fault_ID", how="left")
         if filter == "MTCA06":
             df = df[df["Description"]=="MTCA06"].reset_index(drop=True)
         elif filter == "150us":
@@ -140,9 +142,13 @@ class MainWindow(tk.Tk):
                                      command=partial(self.on_reload, "MTCA06"))
         reload_mtca_btn.pack(side=tk.LEFT, padx=10)
         # T Window has 150us (need --trip-info-file)
-        reload_fast_trip_btn = ttk.Button(bottom_frame1, text=f"150{MU_GREEK}s",
+        reload_fast_trip_btn = ttk.Button(bottom_frame1, text=f"Diff 150{MU_GREEK}s",
                                           command=partial(self.on_reload, f"150us"))
         reload_fast_trip_btn.pack(side=tk.LEFT, padx=10)
+        #
+        # total entries
+        nrows_lbl = ttk.Label(bottom_frame1, textvariable=self.nrecords_var)
+        nrows_lbl.pack(side=tk.LEFT, padx=10)
         #
         preview_info_lbl = ttk.Label(bottom_frame1, textvariable=self.preview_info_var)
         preview_info_lbl.pack(side=tk.LEFT, padx=10)
@@ -156,7 +162,7 @@ class MainWindow(tk.Tk):
 
         #
         bottom_frame2 = ttk.Frame(left_panel)
-        bottom_frame2.pack(side=tk.BOTTOM, fill=tk.X, pady=1)
+        bottom_frame2.pack(side=tk.BOTTOM, fill=tk.X, pady=4)
         # info label
         info_lbl = ttk.Label(bottom_frame2, textvariable=self.info_var)
         info_lbl.pack(fill=tk.X, padx=10)
@@ -244,6 +250,9 @@ class MainWindow(tk.Tk):
             else:
                 _tag = "non-mtca06"
             self.tree.insert("", tk.END, iid=i, values=row.to_list(), tags=(_tag, ))
+
+        # post the total number of entries
+        self.nrecords_var.set(f"{self.data.shape[0]:>4d} in total")
 
     def refresh_table_data(self, filter: Union[str, None] = None):
         """ Re-read the data and refresh the table.
