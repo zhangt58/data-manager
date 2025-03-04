@@ -172,21 +172,28 @@ class MainWindow(tk.Tk):
                     return pth
         return None
 
+    def find_image_path(self, ftid: int) -> Path:
+        glob_pattern = f"*{ftid}_opt.png"
+        for pth in self.images_dirpath.rglob(glob_pattern):
+            if pth.is_file():
+                return pth
+        return None
+
     def update_preview(self):
         self.image_lbl.config(image=self.preview_image)
         self.image_lbl.config(text=self.preview_img_filepath)
 
     def display_figure(self, row):
         ftid: str = row[0]
-        img_filename = f"{ftid}_opt.png"
-        img_filepath = self.images_dirpath.joinpath(img_filename)
-        if img_filepath.is_file():
+        img_filepath = self.find_image_path(ftid)
+        if img_filepath is not None:
             self.preview_image = PhotoImage(file=img_filepath)
             self.preview_img_filepath = img_filepath
             self.preview_img_ftid = int(ftid)
             self.update_preview()
             self.last_valid_sel_lbl.config(text=f"Event on Preview: {self.preview_img_ftid}")
         else:
+            logger.warning(f"Not found the image for {ftid}")
             pass
 
     def present_table_data(self):
