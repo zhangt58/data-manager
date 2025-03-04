@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import csv
+import pandas as pd
 import subprocess
 import tkinter as tk
 from tkinter import ttk, messagebox, PhotoImage
@@ -44,21 +44,14 @@ class MainWindow(tk.Tk):
         self.create_table_panel()
         self.create_preview_panel()
 
-    def read_data(self, filter: Union[str, None] = None) -> list:
+    def read_data(self, desc_filter: Union[str, None] = None) -> pd.DataFrame:
         """ Read a list or rows data from *csv_file*.
         # filter the last column (Description)
         """
-        data = []
-        with open(self.csv_file, mode="r", newline="", encoding="utf-8") as fp:
-            reader = csv.reader(fp, delimiter=";")
-            if filter is None:
-                for row in reader:
-                    data.append(row)
-            else:
-                for row in reader:
-                    if filter in row[-1]:
-                        data.append(row)
-        return data
+        df = pd.read_csv(self.csv_file, delimiter=";")
+        if desc_filter is not None:
+            df = df[df["Description"]==desc_filter].reset_index(drop=True)
+        return df
 
     def create_table_panel(self):
         """ Create the table for MPS faults data
@@ -74,7 +67,7 @@ class MainWindow(tk.Tk):
         tree_frame = ttk.Frame(left_panel)
         tree_frame.pack(fill=tk.BOTH, expand=True)
         tree = ttk.Treeview(tree_frame,
-                            columns=self.data[0],
+                            columns=self.data.columns.to_list(),
                             show="headings", selectmode="browse")
         self.tree = tree
 
@@ -86,7 +79,7 @@ class MainWindow(tk.Tk):
         tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # column headers
-        for i, header in enumerate(self.data[0]):
+        for i, header in enumerate(self.data.columns):
             tree.heading(i, text=header)
             col_w = self.column_widths.get(header, None)
             if col_w is not None:
@@ -138,12 +131,12 @@ class MainWindow(tk.Tk):
         self.update_preview()
 
     def on_select_row(self, evt):
-        _row = self.tree.selection()
+        _row = self.tree.focus()
         if _row:
             items = self.tree.item(_row, "values")
             # show the figure if available
             self.display_figure(items)
-            logger.debug(f"Selected {_row}: {items}, {self.data[int(_row[0]) + 1]}")
+            logger.debug(f"Selected {_row}: {items}, {self.data.iloc[int(_row)]}")
 
     def on_reload(self, filter: Union[str, None] = None):
         """ Reload the MPS faults table.
@@ -199,12 +192,12 @@ class MainWindow(tk.Tk):
     def present_table_data(self):
         """ Present the data to the table.
         """
-        for i, row in enumerate(self.data[1:]):
-            if row[-1] == "MTCA06":
+        for i, row in self.data.iterrows():
+            if row["Description"] == "MTCA06":
                 _tag = "mtac06"
             else:
                 _tag = "non-mtca06"
-            self.tree.insert("", tk.END, iid=i, values=row, tags=(_tag, ))
+            self.tree.insert("", tk.END, iid=i, values=row.to_list(), tags=(_tag, ))
 
     def refresh_table_data(self, filter: Union[str, None] = None):
         """ Re-read the data and refresh the table.
