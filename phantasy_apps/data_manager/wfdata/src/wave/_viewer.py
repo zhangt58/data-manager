@@ -11,8 +11,10 @@ from typing import Union
 
 from ._tk import configure_styles
 from ._log import logger
+from ._ver import _version
 
 LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
+DEFAULT_INFO_STRING = f"DM-Wave Viewer v{_version}"
 
 
 class MainWindow(tk.Tk):
@@ -36,6 +38,12 @@ class MainWindow(tk.Tk):
         self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
         self.column_widths = {} if column_widths is None else column_widths
         self.fig_dpi= fig_dpi
+
+        #
+        self.info_var = tk.StringVar()
+        self.info_var.set(DEFAULT_INFO_STRING)
+        self.preview_info_var = tk.StringVar()
+        self.preview_info_var.set("")
 
         # | ----- | ------- |
         # | Table | preview |
@@ -96,28 +104,40 @@ class MainWindow(tk.Tk):
         self.present_table_data()
 
         # The widgets below the tree_frame
-        bottom_frame = ttk.Frame(left_panel)
-        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
+        # frame1
+        # |- [All] [MTCA06] Event on Preview   [Open Raw] [Open Opt]
+        # frame2
+        # |- Info: xxxx
+        bottom_frame1 = ttk.Frame(left_panel)
+        bottom_frame1.pack(fill=tk.X, padx=10, pady=10)
 
         #
-        reload_all_btn = ttk.Button(bottom_frame, text="Reload All",
+        reload_all_btn = ttk.Button(bottom_frame1, text="Reload All",
                                     command=partial(self.on_reload, None))
         reload_all_btn.pack(side=tk.LEFT)
         #
-        reload_mtca_btn = ttk.Button(bottom_frame, text="MTCA06",
+        reload_mtca_btn = ttk.Button(bottom_frame1, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
         reload_mtca_btn.pack(side=tk.LEFT, padx=10)
 
         #
-        last_valid_sel_lbl = ttk.Label(bottom_frame)
-        last_valid_sel_lbl.pack(side=tk.LEFT, padx=10)
-        self.last_valid_sel_lbl = last_valid_sel_lbl
+        preview_info_lbl = ttk.Label(bottom_frame1, textvariable=self.preview_info_var)
+        preview_info_lbl.pack(side=tk.LEFT, padx=10)
+        self.preview_info_lbl = preview_info_lbl
 
         #
-        open_btn = ttk.Button(bottom_frame, text="Open Opt", command=partial(self.on_open, True))
+        open_btn = ttk.Button(bottom_frame1, text="Open Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=10)
-        open1_btn = ttk.Button(bottom_frame, text="Open Raw", command=partial(self.on_open, False))
+        open1_btn = ttk.Button(bottom_frame1, text="Open Raw", command=partial(self.on_open, False))
         open1_btn.pack(side=tk.RIGHT, padx=10)
+
+        #
+        bottom_frame2 = ttk.Frame(left_panel)
+        bottom_frame2.pack(side=tk.BOTTOM, fill=tk.X, pady=1)
+        # info label
+        info_lbl = ttk.Label(bottom_frame2, textvariable=self.info_var)
+        info_lbl.pack(fill=tk.X, padx=10)
+        self.info_lbl = info_lbl
 
     def create_preview_panel(self):
         self.preview_frame = ttk.Frame(self)
@@ -155,6 +175,8 @@ class MainWindow(tk.Tk):
                       f"dm-wave plot -i {data_path}"
             if self.fig_dpi is not None:
                 cmdline += f" --fig-dpi {self.fig_dpi}"
+            _info_msg = "Opening the figure with the raw data" if not is_opt else \
+                        "Opening the figure with the opt data"
             subprocess.Popen(cmdline, shell=True)
 
     def find_data_path(self, ftid: int, is_opt: bool = True) -> Path:
@@ -184,10 +206,11 @@ class MainWindow(tk.Tk):
             self.preview_img_filepath = img_filepath
             self.preview_img_ftid = int(ftid)
             self.update_preview()
-            self.last_valid_sel_lbl.config(text=f"Event on Preview: {self.preview_img_ftid}")
+            self.preview_info_var.set(f"Event on Preview: {self.preview_img_ftid}")
+            self.info_var.set(DEFAULT_INFO_STRING)
         else:
             logger.warning(f"Not found the image for {ftid}")
-            pass
+            self.info_var.set(f"No image found for MPS fault ID {ftid}")
 
     def present_table_data(self):
         """ Present the data to the table.
