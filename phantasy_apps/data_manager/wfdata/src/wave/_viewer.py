@@ -14,6 +14,7 @@ from ._log import logger
 from ._ver import _version
 
 LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
+MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
 DEFAULT_INFO_STRING = f"DM-Wave Viewer v{_version}"
 
 
@@ -53,9 +54,10 @@ class MainWindow(tk.Tk):
         self.create_table_panel()
         self.create_preview_panel()
 
-    def read_data(self, desc_filter: Union[str, None] = None) -> pd.DataFrame:
+    def read_data(self, filter: Union[str, None] = None) -> pd.DataFrame:
         """ Read a list or rows data from *csv_file*.
-        # filter the last column (Description)
+        # filter the "Description" column: MTCA06
+        # filter the "T Window" column: 150us
         """
         df = pd.read_csv(self.csv_file, delimiter=";")
         # merge the trip info if available
@@ -68,8 +70,15 @@ class MainWindow(tk.Tk):
                     "t window": "T Window",
                     "threshold": "Threshold",
                     }), on="Fault_ID", how="inner")
-        if desc_filter is not None:
-            df = df[df["Description"]==desc_filter].reset_index(drop=True)
+        if filter == "MTCA06":
+            df = df[df["Description"]=="MTCA06"].reset_index(drop=True)
+        elif filter == "150us":
+            if "T Window" in df:
+                df = df[df["T Window"].astype(str).str.contains(
+                        "Diff 150[^0]s", regex=True)].reset_index(drop=True)
+                self.info_var.set(DEFAULT_INFO_STRING)
+            else:
+                self.info_var.set("MTCA trip info is not available!")
         return df
 
     def create_table_panel(self):
@@ -122,15 +131,18 @@ class MainWindow(tk.Tk):
         bottom_frame1 = ttk.Frame(left_panel)
         bottom_frame1.pack(fill=tk.X, padx=10, pady=10)
 
-        #
+        # all
         reload_all_btn = ttk.Button(bottom_frame1, text="Reload All",
                                     command=partial(self.on_reload, None))
         reload_all_btn.pack(side=tk.LEFT)
-        #
+        # description = MTCA06
         reload_mtca_btn = ttk.Button(bottom_frame1, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
         reload_mtca_btn.pack(side=tk.LEFT, padx=10)
-
+        # T Window has 150us (need --trip-info-file)
+        reload_fast_trip_btn = ttk.Button(bottom_frame1, text=f"150{MU_GREEK}s",
+                                          command=partial(self.on_reload, f"150us"))
+        reload_fast_trip_btn.pack(side=tk.LEFT, padx=10)
         #
         preview_info_lbl = ttk.Label(bottom_frame1, textvariable=self.preview_info_var)
         preview_info_lbl.pack(side=tk.LEFT, padx=10)
