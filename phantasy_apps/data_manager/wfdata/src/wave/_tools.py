@@ -368,6 +368,8 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="The filepath of the MPS faults event data.")
     parser.add_argument("images_dir", type=str,
                         help="The directory path of the processed images.")
+    parser.add_argument("--trip-info-file", dest="trip_info_file", type=str,
+                        help="The .h5 file for the MPS MTCA trip info.")
     parser.add_argument("--data-dir", action="append", dest="data_dirs",
                         help="The directory path for either the optimized, merged or raw data files.")
     parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
@@ -376,11 +378,13 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="Override the figure DPI setting in interactive mode.")
     parser.add_argument("--column-widths", dest="col_widths", type=json.loads, default="{}",
                         help="JSON string for the column widths of the tree view.")
+    parser.add_argument("--minsize", dest="minsize", type=str, default="1200x900",
+                        help="The minimum size of the GUI.")
 
     args = parser.parse_args(sys.argv[2:])
     logger.setLevel(args.log_level)
-    run_viewer(args.mps_faults_file, args.images_dir, args.data_dirs, args.fig_dpi,
-               **args.col_widths)
+    run_viewer(args.mps_faults_file, args.trip_info_file, args.images_dir, args.data_dirs,
+               args.minsize, args.fig_dpi, **args.col_widths)
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],

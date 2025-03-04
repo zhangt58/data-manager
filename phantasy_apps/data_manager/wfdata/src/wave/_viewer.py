@@ -19,7 +19,7 @@ DEFAULT_INFO_STRING = f"DM-Wave Viewer v{_version}"
 
 class MainWindow(tk.Tk):
 
-    def __init__(self, csv_file: str, imags_dir: str,
+    def __init__(self, csv_file: str, trip_info_file: str, imags_dir: str,
                  data_dirs: list[str], fig_dpi: Union[int, None] = None,
                  column_widths: dict = None):
         super().__init__()
@@ -32,6 +32,7 @@ class MainWindow(tk.Tk):
 
         # read the data for the table
         self.csv_file = csv_file
+        self.trip_info_file = trip_info_file
         self.data = self.read_data()
         #
         self.images_dirpath = Path(imags_dir)
@@ -57,6 +58,16 @@ class MainWindow(tk.Tk):
         # filter the last column (Description)
         """
         df = pd.read_csv(self.csv_file, delimiter=";")
+        # merge the trip info if available
+        if self.trip_info_file is not None:
+            _df_info = pd.read_hdf(self.trip_info_file)[
+                    ["devices", "t window", "threshold", "ID"]]
+            df = pd.merge(df, _df_info.rename(columns={
+                    "ID": "Fault_ID",
+                    "devices": "Devices",
+                    "t window": "T Window",
+                    "threshold": "Threshold",
+                    }), on="Fault_ID", how="inner")
         if desc_filter is not None:
             df = df[df["Description"]==desc_filter].reset_index(drop=True)
         return df
@@ -230,22 +241,11 @@ class MainWindow(tk.Tk):
         self.present_table_data()
 
 
-def main(mps_faults_path: str, images_dir: str, data_dirs: list[str],
-         fig_dpi: Union[int, None] = None, **kws):
-    app = MainWindow(mps_faults_path, images_dir, data_dirs, fig_dpi,
+def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
+         minsize: str = "1200x900", fig_dpi: Union[int, None] = None, **kws):
+    app = MainWindow(mps_faults_path, trip_info_file, images_dir, data_dirs, fig_dpi,
                      column_widths=kws)
-    app.minsize(width=1200, height=900)
+    w, h = minsize.split('x')
+    app.minsize(width=w, height=h)
     app.mainloop()
 
-
-if __name__ == "__main__":
-    csv_file = "./MPS-faults.csv"
-    images_dir = "/home/tong/tools/wfdata/final/images"
-
-    column_widths={
-        'Fault_ID': 100, 'Time': 200, 'Power': 100,
-        'Destination': 150,
-        'Ion': 80, 'Type': 100,
-        'Description': 200
-    }
-    main(csv_file, images_dir, **column_widths)
