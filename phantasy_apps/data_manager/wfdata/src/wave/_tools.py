@@ -378,13 +378,13 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="Override the figure DPI setting in interactive mode.")
     parser.add_argument("--column-widths", dest="col_widths", type=json.loads, default="{}",
                         help="JSON string for the column widths of the tree view.")
-    parser.add_argument("--minsize", dest="minsize", type=str, default="1200x900",
-                        help="The minimum size of the GUI.")
+    parser.add_argument("--geometry", dest="geometry", type=str, default="1600x1200",
+                        help="The initial window size of the GUI.")
 
     args = parser.parse_args(sys.argv[2:])
     logger.setLevel(args.log_level)
     run_viewer(args.mps_faults_file, args.trip_info_file, args.images_dir, args.data_dirs,
-               args.minsize, args.fig_dpi, **args.col_widths)
+               args.geometry, args.fig_dpi, **args.col_widths)
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],

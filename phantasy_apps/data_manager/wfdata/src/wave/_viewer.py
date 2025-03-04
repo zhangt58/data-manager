@@ -53,6 +53,13 @@ class MainWindow(tk.Tk):
         # | Table | preview |
         # | ----- | ------- |
         #
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame.columnconfigure(0, weight=0)
+        main_frame.columnconfigure(1, weight=1)
+        main_frame.rowconfigure(0, weight=1)
+        self.main_frame = main_frame
+        #
         self.create_table_panel()
         self.create_preview_panel()
 
@@ -90,8 +97,8 @@ class MainWindow(tk.Tk):
         # | tree frame
         # | bottom frame
         #
-        left_panel = ttk.Frame(self)
-        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        left_panel = ttk.Frame(self.main_frame)
+        left_panel.grid(row=0, column=0, sticky="ns")
         self.left_panel = left_panel
 
         tree_frame = ttk.Frame(left_panel)
@@ -102,10 +109,16 @@ class MainWindow(tk.Tk):
         self.tree = tree
 
         # scrollbars
-        v_scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=v_scroll.set)
+        v_scroll = tk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
         v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.v_scroll = v_scroll
         #
+        h_scroll = tk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        self.h_scroll = h_scroll
+        #
+        tree.configure(xscrollcommand=h_scroll.set)
+        tree.configure(yscrollcommand=v_scroll.set)
         tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # column headers
@@ -169,10 +182,10 @@ class MainWindow(tk.Tk):
         self.info_lbl = info_lbl
 
     def create_preview_panel(self):
-        self.preview_frame = ttk.Frame(self)
-        self.preview_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=10, pady=10)
+        self.right_panel = ttk.Frame(self.main_frame)
+        self.right_panel.grid(row=0, column=1, sticky="nsew")
 
-        self.image_lbl = ttk.Label(self.preview_frame)
+        self.image_lbl = ttk.Label(self.right_panel)
         self.image_lbl.pack(fill=tk.BOTH, expand=True)
         self.preview_image = None
         self.preview_img_filepath = None
@@ -263,10 +276,10 @@ class MainWindow(tk.Tk):
 
 
 def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
-         minsize: str = "1200x900", fig_dpi: Union[int, None] = None, **kws):
+         geometry: str = "1600x1200", fig_dpi: Union[int, None] = None, **kws):
     app = MainWindow(mps_faults_path, trip_info_file, images_dir, data_dirs, fig_dpi,
                      column_widths=kws)
-    w, h = minsize.split('x')
-    app.minsize(width=w, height=h)
+    app.geometry(geometry)
+    logger.info(f"Set the initial size {geometry}")
     app.mainloop()
 
