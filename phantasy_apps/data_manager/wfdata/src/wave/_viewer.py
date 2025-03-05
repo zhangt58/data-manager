@@ -4,10 +4,11 @@
 import pandas as pd
 import subprocess
 import tkinter as tk
-from tkinter import ttk, messagebox, PhotoImage
+from tkinter import ttk, messagebox
 from pathlib import Path
 from functools import partial
 from typing import Union
+from PIL import Image, ImageTk
 
 from ._tk import configure_styles
 from ._log import logger
@@ -55,8 +56,8 @@ class MainWindow(tk.Tk):
         #
         main_frame = ttk.Frame(self)
         main_frame.pack(fill=tk.BOTH, expand=True)
-        main_frame.columnconfigure(0, weight=0)
-        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=3, minsize=600)
         main_frame.rowconfigure(0, weight=1)
         self.main_frame = main_frame
         #
@@ -94,11 +95,12 @@ class MainWindow(tk.Tk):
         """ Create the table for MPS faults data
         """
         #
-        # | tree frame
+        # | main tree frame
+        # | trip-info tree frame
         # | bottom frame
         #
-        left_panel = ttk.Frame(self.main_frame)
-        left_panel.grid(row=0, column=0, sticky="ns")
+        left_panel = ttk.Frame(self.main_frame, width=500)
+        left_panel.grid(row=0, column=0, sticky="nsw")
         self.left_panel = left_panel
 
         tree_frame = ttk.Frame(left_panel)
@@ -109,16 +111,12 @@ class MainWindow(tk.Tk):
         self.tree = tree
 
         # scrollbars
-        v_scroll = tk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
-        v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.v_scroll = v_scroll
-        #
         h_scroll = tk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=tree.xview)
         h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
-        self.h_scroll = h_scroll
+        v_scroll = tk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
+        v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.configure(xscrollcommand=h_scroll.set, yscrollcommand=v_scroll.set)
         #
-        tree.configure(xscrollcommand=h_scroll.set)
-        tree.configure(yscrollcommand=v_scroll.set)
         tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # column headers
@@ -140,7 +138,7 @@ class MainWindow(tk.Tk):
 
         # The widgets below the tree_frame
         # frame1
-        # |- [All] [MTCA06] Event on Preview   [Open Raw] [Open Opt]
+        # |- [All] [MTCA06] Event on Preview
         # frame2
         # |- Info: xxxx
         bottom_frame1 = ttk.Frame(left_panel)
@@ -173,6 +171,9 @@ class MainWindow(tk.Tk):
         open1_btn = ttk.Button(bottom_frame1, text="Open Raw", command=partial(self.on_open, False))
         open1_btn.pack(side=tk.RIGHT, padx=10)
 
+        fit_btn = ttk.Button(bottom_frame1, text="Fit Image", command=self.on_fit_image)
+        fit_btn.pack(side=tk.RIGHT, padx=10)
+
         #
         bottom_frame2 = ttk.Frame(left_panel)
         bottom_frame2.pack(side=tk.BOTTOM, fill=tk.X, pady=4)
@@ -182,15 +183,41 @@ class MainWindow(tk.Tk):
         self.info_lbl = info_lbl
 
     def create_preview_panel(self):
-        self.right_panel = ttk.Frame(self.main_frame)
+        # right panel
+        # |- image label
+        # |- [fit]   [Open Raw] [Open Opt]
+        self.right_panel = ttk.Frame(self.main_frame, width=800, borderwidth=2)
         self.right_panel.grid(row=0, column=1, sticky="nsew")
+        self.right_panel.bind('<Configure>', lambda e: self.on_fit_image())
 
-        self.image_lbl = ttk.Label(self.right_panel)
+        # image
+        img_frame = ttk.Frame(self.right_panel)
+        img_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.image_lbl = ttk.Label(img_frame)
         self.image_lbl.pack(fill=tk.BOTH, expand=True)
-        self.preview_image = None
-        self.preview_img_filepath = None
-        self.preview_img_ftid = None
-        self.update_preview()
+        self.loaded_image = None  # the loaded image from a png file.
+        self.loaded_image_tk = None  # the image put into a tk label.
+        self.loaded_img_filepath = None
+        self.loaded_image_ftid = None
+        self.loaded_image_var = tk.StringVar()
+        self.loaded_image_var.trace_add("write", self.update_preview)
+
+    def on_fit_image(self):
+        """ Fit the size of image to the right panel.
+        """
+        w = self.right_panel.winfo_width()
+        h = self.right_panel.winfo_height()
+        print(f"Right panel frame: {w}x{h}")
+        if self.loaded_image is not None:
+            w0, h0 = self.loaded_image.width, self.loaded_image.height
+            new_w = w  # min(w0, w)
+            new_h = int(new_w * h0 / w0)
+            print(f"Resize to {new_w}x{new_h}")
+            _loaded_image_resized = self.loaded_image.resize((new_w, new_h),
+                                                             Image.Resampling.LANCZOS)
+            self.loaded_image_tk = ImageTk.PhotoImage(_loaded_image_resized)
+            self.image_lbl.config(image=self.loaded_image_tk)
 
     def on_select_row(self, evt):
         _row = self.tree.focus()
@@ -207,10 +234,10 @@ class MainWindow(tk.Tk):
 
     def on_open(self, is_opt: bool):
         # find the data files
-        if self.preview_img_ftid is None:
+        if self.loaded_image_ftid is None:
             return
 
-        data_path = self.find_data_path(self.preview_img_ftid, is_opt)
+        data_path = self.find_data_path(self.loaded_image_ftid, is_opt)
         if data_path is not None:
             # call plot tool
             cmdline = f"dm-wave plot -opt -i {data_path}" if is_opt else \
@@ -236,19 +263,20 @@ class MainWindow(tk.Tk):
                 return pth
         return None
 
-    def update_preview(self):
-        self.image_lbl.config(image=self.preview_image)
-        self.image_lbl.config(text=self.preview_img_filepath)
+    def update_preview(self, *args):
+        self.loaded_img_filepath = img_filepath = self.loaded_image_var.get()
+        self.loaded_image = Image.open(img_filepath)
+        self.loaded_image_tk = ImageTk.PhotoImage(self.loaded_image)
+        self.image_lbl.config(image=self.loaded_image_tk)
+        self.image_lbl.config(text=self.loaded_img_filepath)
 
     def display_figure(self, row):
         ftid: str = row[0]
         img_filepath = self.find_image_path(ftid)
         if img_filepath is not None:
-            self.preview_image = PhotoImage(file=img_filepath)
-            self.preview_img_filepath = img_filepath
-            self.preview_img_ftid = int(ftid)
-            self.update_preview()
-            self.preview_info_var.set(f"Event on Preview: {self.preview_img_ftid}")
+            self.loaded_image_ftid = int(ftid)
+            self.loaded_image_var.set(img_filepath)
+            self.preview_info_var.set(f"Event on Preview: {ftid}")
             self.info_var.set(DEFAULT_INFO_STRING)
         else:
             logger.warning(f"Not found the image for {ftid}")
@@ -280,6 +308,8 @@ def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: 
     app = MainWindow(mps_faults_path, trip_info_file, images_dir, data_dirs, fig_dpi,
                      column_widths=kws)
     app.geometry(geometry)
+    w, h = geometry.split("x")
+    app.minsize(width=w, height=h)
     logger.info(f"Set the initial size {geometry}")
     app.mainloop()
 
