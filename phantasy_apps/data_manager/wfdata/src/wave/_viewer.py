@@ -32,6 +32,10 @@ class MainWindow(tk.Tk):
         #  window title
         self.title("Post-mortem Data Viewer on MPS Faults")
 
+        # screen resolution
+        self.screen_width = self.winfo_screenwidth()
+        self.screen_height = self.winfo_screenheight()
+
         # read the data for the table
         self.csv_file = csv_file
         self.trip_info_file = trip_info_file
@@ -56,8 +60,8 @@ class MainWindow(tk.Tk):
         #
         main_frame = ttk.Frame(self)
         main_frame.pack(fill=tk.BOTH, expand=True)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=3, minsize=600)
+        main_frame.columnconfigure(0, weight=0)
+        main_frame.columnconfigure(1, weight=1)
         main_frame.rowconfigure(0, weight=1)
         self.main_frame = main_frame
         #
@@ -99,12 +103,15 @@ class MainWindow(tk.Tk):
         # | trip-info tree frame
         # | bottom frame
         #
-        left_panel = ttk.Frame(self.main_frame, width=500)
+        left_panel = ttk.Frame(self.main_frame,
+                               width=min(800, self.screen_width // 3))
+        logger.info(f"Set the left panel width < {min(800, self.screen_width // 3)}px")
         left_panel.grid(row=0, column=0, sticky="nsw")
         self.left_panel = left_panel
 
         tree_frame = ttk.Frame(left_panel)
         tree_frame.pack(fill=tk.BOTH, expand=True)
+        tree_frame.pack_propagate(False)
         tree = ttk.Treeview(tree_frame,
                             columns=self.data.columns.to_list(),
                             show="headings", selectmode="browse")
@@ -171,9 +178,6 @@ class MainWindow(tk.Tk):
         open1_btn = ttk.Button(bottom_frame1, text="Open Raw", command=partial(self.on_open, False))
         open1_btn.pack(side=tk.RIGHT, padx=10)
 
-        fit_btn = ttk.Button(bottom_frame1, text="Fit Image", command=self.on_fit_image)
-        fit_btn.pack(side=tk.RIGHT, padx=10)
-
         #
         bottom_frame2 = ttk.Frame(left_panel)
         bottom_frame2.pack(side=tk.BOTTOM, fill=tk.X, pady=4)
@@ -188,7 +192,8 @@ class MainWindow(tk.Tk):
         # |- [fit]   [Open Raw] [Open Opt]
         self.right_panel = ttk.Frame(self.main_frame, width=800, borderwidth=2)
         self.right_panel.grid(row=0, column=1, sticky="nsew")
-        self.right_panel.bind('<Configure>', lambda e: self.on_fit_image())
+        self.right_panel.bind('<Configure>',
+                              lambda e: self.right_panel.after(50, self.on_fit_image()))
 
         # image
         img_frame = ttk.Frame(self.right_panel)
@@ -208,12 +213,11 @@ class MainWindow(tk.Tk):
         """
         w = self.right_panel.winfo_width()
         h = self.right_panel.winfo_height()
-        print(f"Right panel frame: {w}x{h}")
         if self.loaded_image is not None:
             w0, h0 = self.loaded_image.width, self.loaded_image.height
             new_w = w  # min(w0, w)
             new_h = int(new_w * h0 / w0)
-            print(f"Resize to {new_w}x{new_h}")
+            logger.debug(f"Resizing image frame to: {new_w}x{new_h}")
             _loaded_image_resized = self.loaded_image.resize((new_w, new_h),
                                                              Image.Resampling.LANCZOS)
             self.loaded_image_tk = ImageTk.PhotoImage(_loaded_image_resized)
