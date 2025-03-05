@@ -1,0 +1,78 @@
+name: Build Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+      types:
+        - published
+
+jobs:
+  build:
+    name: Build Wheels
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04"]
+        py: ["3.10", "3.11"]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./wfdata
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        # Extract the version from the Git tag (e.g., v1.0.0 -> 1.0.0)
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "Extracted version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT  # Make the version available to subsequent steps
+
+    - name: Set up Python ${{ matrix.py }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.py }}
+
+    - name: Install dependencies
+      run: |
+        python -c "import sys;print(sys.version)"
+        python -m pip install --upgrade pip
+        pip install flake8 wheel
+        if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Build wheels
+      run: |
+        python setup.py bdist_wheel
+
+    - name: Install PyInstaller
+      run: |
+        python -m pip install pyinstaller -U
+
+    - name: Create Packages
+      run: |
+        python -m pip install ./dist/*.whl -U
+        cd pkg
+        pyinstaller dm-wave.py --hidden-import='PIL._tkinter_finder' \
+          --noconfirm --clean
+        tar cv ./dist | xz -9 > dm-wave_v${{ steps.version.outputs.version }}.tar.xz
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Bundled binaries
+        path: pkg/dm-wave_v${{ steps.version.outputs.version }}.tar.xz
+        retention-days: 7
