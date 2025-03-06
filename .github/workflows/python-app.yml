@@ -59,7 +59,7 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        python -m pip install ./dist/*.whl -U
+        python -m pip install --find-links=./dist dm-wave -U
         cd pkg
         python -m pip install -r requirements.txt
         pyinstaller dm-wave.py --hidden-import='PIL._tkinter_finder' \
@@ -125,7 +125,7 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        python -m pip install .\dist\*.whl -U
+        python -m pip install --find-links=.\dist dm-wave -U
         cd pkg
         python -m pip install -r requirements.txt
         pyinstaller dm-wave.py --hidden-import='PIL._tkinter_finder' `
