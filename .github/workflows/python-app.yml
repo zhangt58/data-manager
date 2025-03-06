@@ -10,7 +10,7 @@ on:
 
 jobs:
   linux-build:
-    name: Build Package
+    name: Build Package (Linux)
     strategy:
       matrix:
         os: ["ubuntu-22.04"]
@@ -74,7 +74,7 @@ jobs:
         retention-days: 7
 
   win-build:
-    name: Build Package
+    name: Build Package (Windows)
     strategy:
       matrix:
         py: ["3.10", "3.11"]
@@ -92,6 +92,7 @@ jobs:
 
     - name: Set package name
       id: set_pkgname
+      shell: bash
       run: |
         # Extract the version from the Git tag (e.g., v1.0.0 -> 1.0.0)
         ver=${GITHUB_REF#refs/tags/v}
