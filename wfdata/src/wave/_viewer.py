@@ -173,12 +173,6 @@ class MainWindow(tk.Tk):
         self.preview_info_lbl = preview_info_lbl
 
         #
-        open_btn = ttk.Button(bottom_frame1, text="Open Opt", command=partial(self.on_open, True))
-        open_btn.pack(side=tk.RIGHT, padx=10)
-        open1_btn = ttk.Button(bottom_frame1, text="Open Raw", command=partial(self.on_open, False))
-        open1_btn.pack(side=tk.RIGHT, padx=10)
-
-        #
         bottom_frame2 = ttk.Frame(left_panel)
         bottom_frame2.pack(side=tk.BOTTOM, fill=tk.X, pady=4)
         # info label
@@ -190,23 +184,40 @@ class MainWindow(tk.Tk):
         # right panel
         # |- image label
         # |- [fit]   [Open Raw] [Open Opt]
-        self.right_panel = ttk.Frame(self.main_frame, width=800, borderwidth=2)
+        self.right_panel = ttk.Frame(self.main_frame, borderwidth=2)
         self.right_panel.grid(row=0, column=1, sticky="nsew")
-        self.right_panel.bind('<Configure>',
-                              lambda e: self.right_panel.after(50, self.on_fit_image()))
 
+        self.right_panel.rowconfigure(0, weight=1)
+        self.right_panel.rowconfigure(1, weight=0)
+        self.right_panel.columnconfigure(0, weight=1)
         # image
-        img_frame = ttk.Frame(self.right_panel)
-        img_frame.pack(fill=tk.BOTH, expand=True)
+        img_frame = tk.Frame(self.right_panel, bg="lightgray")
+        img_frame.grid(row=0, column=0, sticky="nsew")
 
-        self.image_lbl = ttk.Label(img_frame)
-        self.image_lbl.pack(fill=tk.BOTH, expand=True)
+        _font = tk.font.nametofont("TkTextFont")
+        self.image_lbl = ttk.Label(img_frame, anchor=tk.CENTER,
+                                   font=(_font.actual()['family'],
+                                         int(_font.actual()['size'] * 1.5)))
+        self.image_lbl.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         self.loaded_image = None  # the loaded image from a png file.
         self.loaded_image_tk = None  # the image put into a tk label.
         self.loaded_img_filepath = None
         self.loaded_image_ftid = None
         self.loaded_image_var = tk.StringVar()
         self.loaded_image_var.trace_add("write", self.update_preview)
+        # initial image label
+        self.image_lbl.config(text="Select an event to preview the image")
+
+        # control frame
+        ctrl_frame = tk.Frame(self.right_panel)
+        ctrl_frame.grid(row=1, column=0, sticky="ew")
+        fit_btn = ttk.Button(ctrl_frame, text="Fit Image", command=self.on_fit_image)
+        fit_btn.pack(side=tk.LEFT, padx=5)
+        #
+        open_btn = ttk.Button(ctrl_frame, text="Open Opt", command=partial(self.on_open, True))
+        open_btn.pack(side=tk.RIGHT, padx=5)
+        open1_btn = ttk.Button(ctrl_frame, text="Open Raw", command=partial(self.on_open, False))
+        open1_btn.pack(side=tk.RIGHT, padx=10)
 
     def on_fit_image(self):
         """ Fit the size of image to the right panel.
@@ -273,6 +284,7 @@ class MainWindow(tk.Tk):
         self.loaded_image_tk = ImageTk.PhotoImage(self.loaded_image)
         self.image_lbl.config(image=self.loaded_image_tk)
         self.image_lbl.config(text=self.loaded_img_filepath)
+        self.on_fit_image()
 
     def display_figure(self, row):
         ftid: str = row[0]
