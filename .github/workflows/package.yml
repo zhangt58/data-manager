@@ -64,7 +64,7 @@ jobs:
         python -m pip install -r requirements.txt
         pyinstaller dm-wave.py --hidden-import='PIL._tkinter_finder' \
           --noconfirm --clean
-        tar cv ./dist | xz -9 > ${{ steps.set_pkgname.outputs.name }}.tar.xz
+        cd dist && tar cv dm-wave | xz -9 > ../${{ steps.set_pkgname.outputs.name }}.tar.xz
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
