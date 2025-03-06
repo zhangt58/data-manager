@@ -39,7 +39,7 @@ class MainWindow(tk.Tk):
         # read the data for the table
         self.csv_file = csv_file
         self.trip_info_file = trip_info_file
-        self.data = self.read_data()
+        self.data, self.data_info = self.read_data()
         #
         self.images_dirpath = Path(imags_dir)
         self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
@@ -54,16 +54,24 @@ class MainWindow(tk.Tk):
         self.nrecords_var = tk.StringVar()
         self.nrecords_var.set(f"Total {0:>4d}")
 
-        # | ----- | ------- |
+        # | --L-- | ---R--- |
         # | Table | preview |
         # | ----- | ------- |
         #
         main_frame = ttk.Frame(self)
         main_frame.pack(fill=tk.BOTH, expand=True)
-        main_frame.columnconfigure(0, weight=0)
-        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=4, minsize=500)
         main_frame.rowconfigure(0, weight=1)
         self.main_frame = main_frame
+        #
+        left_panel = ttk.Frame(self.main_frame, padding=2, borderwidth=1)
+        left_panel.grid(row=0, column=0, sticky="nsew")
+        self.left_panel = left_panel
+        #
+        self.right_panel = ttk.Frame(self.main_frame, padding=2, borderwidth=2)
+        self.right_panel.grid(row=0, column=1, sticky="nsew")
+
         #
         self.create_table_panel()
         self.create_preview_panel()
@@ -73,27 +81,34 @@ class MainWindow(tk.Tk):
         # filter the "Description" column: MTCA06
         # filter the "T Window" column: 150us
         """
+        # main event table
         df = pd.read_csv(self.csv_file, delimiter=";")
-        # merge the trip info if available
+        # trip info table
         if self.trip_info_file is not None:
-            _df_info = pd.read_hdf(self.trip_info_file)[
-                    ["devices", "t window", "threshold", "ID"]]
-            df = pd.merge(df, _df_info.rename(columns={
-                    "ID": "Fault_ID",
-                    "devices": "Devices",
-                    "t window": "T Window",
-                    "threshold": "Threshold",
-                    }), on="Fault_ID", how="left")
+            df_info = pd.read_hdf(self.trip_info_file)[
+                        ["ID", "devices", "t window", "threshold"]
+                    ].rename(columns={
+                        "ID": "Fault_ID",
+                        "devices": "Devices",
+                        "t window": "T Window",
+                        "threshold": "Threshold"
+                    })
+        else:
+            df_info = None
+        # filter main
         if filter == "MTCA06":
             df = df[df["Description"]=="MTCA06"].reset_index(drop=True)
-        elif filter == "150us":
-            if "T Window" in df:
-                df = df[df["T Window"].astype(str).str.contains(
-                        "Diff 150[^0]s", regex=True)].reset_index(drop=True)
-                self.info_var.set(DEFAULT_INFO_STRING)
-            else:
+        # filter info
+        if filter == "150us":
+            if df_info is None:
                 self.info_var.set("MTCA trip info is not available!")
-        return df
+            else:
+                _df = df_info.set_index('Fault_ID')
+                idx = _df[_df["T Window"].astype(str).str.contains(
+                    "Diff 150[^0]s", regex=True)].index
+                df = df.set_index('Fault_ID').loc[idx].reset_index()
+                self.info_var.set(DEFAULT_INFO_STRING)
+        return df, df_info
 
     def create_table_panel(self):
         """ Create the table for MPS faults data
@@ -103,80 +118,75 @@ class MainWindow(tk.Tk):
         # | trip-info tree frame
         # | bottom frame
         #
-        left_panel = ttk.Frame(self.main_frame,
-                               width=min(800, self.screen_width // 3))
-        logger.info(f"Set the left panel width < {min(800, self.screen_width // 3)}px")
-        left_panel.grid(row=0, column=0, sticky="nsw")
-        self.left_panel = left_panel
-
-        tree_frame = ttk.Frame(left_panel)
-        tree_frame.pack(fill=tk.BOTH, expand=True)
-        tree_frame.pack_propagate(False)
-        tree = ttk.Treeview(tree_frame,
-                            columns=self.data.columns.to_list(),
-                            show="headings", selectmode="browse")
-        self.tree = tree
-
-        # scrollbars
-        h_scroll = tk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=tree.xview)
-        h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
-        v_scroll = tk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
-        v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        tree.configure(xscrollcommand=h_scroll.set, yscrollcommand=v_scroll.set)
+        data_frame = ttk.Frame(self.left_panel)
+        data_frame.pack(fill=tk.BOTH, expand=True)
         #
-        tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        data_frame.rowconfigure(0, weight=1)
+        data_frame.rowconfigure(1, weight=0)
+        data_frame.rowconfigure(2, weight=0)
+        data_frame.columnconfigure(0, weight=1)
+        # data_frame.grid_propagate(False)
 
-        # column headers
-        for i, header in enumerate(self.data.columns):
-            tree.heading(i, text=header)
-            col_w = self.column_widths.get(header, None)
-            if col_w is not None:
-                logger.warning(f"Set {header} width to {col_w}")
-                tree.column(header, width=col_w)
+        tree_frame = ttk.Frame(data_frame)
+        tree_frame.grid(row=0, column=0, sticky="nsew")
+        # place tree
+        self.tree = self.place_table(tree_frame, self.data.columns.to_list(),
+                                     xscroll_on=True, yscroll_on=True,
+                                     column_widths=self.column_widths)
 
         # tag-wised style
-        tree.tag_configure("mtca06", foreground="black")
-        tree.tag_configure("non-mtca06", foreground="gray")
+        self.tree.tag_configure("mtca06", foreground="black")
+        self.tree.tag_configure("non-mtca06", foreground="gray")
 
-        tree.bind("<<TreeviewSelect>>", self.on_select_row)
+        self.tree.bind("<<TreeviewSelect>>", self.on_select_row)
 
-        # table data
-        self.present_table_data()
+        # trip info tree
+        info_tree_frame = ttk.Frame(data_frame)
+        info_tree_frame.grid(row=1, column=0, sticky="nsew")
+        #
+        self.info_tree = self.place_table(info_tree_frame, self.data_info.columns.to_list(),
+                                          xscroll_on=True, yscroll_on=True,
+                                          column_widths=self.column_widths)
+
+        # main table data
+        self.present_main_data()
 
         # The widgets below the tree_frame
         # frame1
         # |- [All] [MTCA06] Event on Preview
         # frame2
         # |- Info: xxxx
-        bottom_frame1 = ttk.Frame(left_panel)
-        bottom_frame1.pack(fill=tk.X, padx=10, pady=10)
+        ctrl_frame = ttk.Frame(data_frame)
+        ctrl_frame.grid(row=2, column=0, sticky="nsew")
 
+        ctrl_frame1 = ttk.Frame(ctrl_frame)
+        ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
+        ctrl_frame2 = ttk.Frame(ctrl_frame)
+        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=5, pady=5)
         # all
-        reload_all_btn = ttk.Button(bottom_frame1, text="Reload All",
+        reload_all_btn = ttk.Button(ctrl_frame1, text="Reload All",
                                     command=partial(self.on_reload, None))
         reload_all_btn.pack(side=tk.LEFT, padx=2)
         # description = MTCA06
-        reload_mtca_btn = ttk.Button(bottom_frame1, text="MTCA06",
+        reload_mtca_btn = ttk.Button(ctrl_frame1, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
         reload_mtca_btn.pack(side=tk.LEFT, padx=10)
         # T Window has 150us (need --trip-info-file)
-        reload_fast_trip_btn = ttk.Button(bottom_frame1, text=f"Diff 150{MU_GREEK}s",
+        reload_fast_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 150{MU_GREEK}s",
                                           command=partial(self.on_reload, f"150us"))
         reload_fast_trip_btn.pack(side=tk.LEFT, padx=10)
         #
         # total entries
-        nrows_lbl = ttk.Label(bottom_frame1, textvariable=self.nrecords_var)
+        nrows_lbl = ttk.Label(ctrl_frame1, textvariable=self.nrecords_var)
         nrows_lbl.pack(side=tk.RIGHT, padx=5)
         #
-        preview_info_lbl = ttk.Label(bottom_frame1, textvariable=self.preview_info_var)
-        preview_info_lbl.pack(side=tk.RIGHT, padx=2)
+        preview_info_lbl = ttk.Label(ctrl_frame1, textvariable=self.preview_info_var)
+        preview_info_lbl.pack(side=tk.RIGHT, padx=10)
         self.preview_info_lbl = preview_info_lbl
 
         #
-        bottom_frame2 = ttk.Frame(left_panel)
-        bottom_frame2.pack(side=tk.BOTTOM, fill=tk.X, pady=4)
         # info label
-        info_lbl = ttk.Label(bottom_frame2, textvariable=self.info_var)
+        info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
         info_lbl.pack(fill=tk.X, padx=10)
         self.info_lbl = info_lbl
 
@@ -184,8 +194,6 @@ class MainWindow(tk.Tk):
         # right panel
         # |- image label
         # |- [fit]   [Open Raw] [Open Opt]
-        self.right_panel = ttk.Frame(self.main_frame, borderwidth=2)
-        self.right_panel.grid(row=0, column=1, sticky="nsew")
 
         self.right_panel.rowconfigure(0, weight=1)
         self.right_panel.rowconfigure(1, weight=0)
@@ -241,6 +249,8 @@ class MainWindow(tk.Tk):
             # show the figure if available
             self.display_figure(items)
             logger.debug(f"Selected {_row}: {items}, {self.data.iloc[int(_row)]}")
+            # show the trip info
+            self.display_info(items)
 
     def on_reload(self, filter: Union[str, None] = None):
         """ Reload the MPS faults table.
@@ -298,8 +308,37 @@ class MainWindow(tk.Tk):
             logger.warning(f"Not found the image for {ftid}")
             self.info_var.set(f"No image found for MPS fault ID {ftid}")
 
-    def present_table_data(self):
-        """ Present the data to the table.
+    def place_table(self, parent_frame, headers: list[str],
+                    xscroll_on: bool = True, yscroll_on: bool = True,
+                    column_widths: dict[str, int] = {}):
+        tree = ttk.Treeview(parent_frame,
+                            columns=headers,
+                            show="headings", selectmode="browse")
+        # scrollbars
+        if xscroll_on:
+            x_scroll = tk.Scrollbar(parent_frame, orient=tk.HORIZONTAL, command=tree.xview)
+            x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+            tree.configure(xscrollcommand=x_scroll.set)
+        if yscroll_on:
+            y_scroll = tk.Scrollbar(parent_frame, orient=tk.VERTICAL, command=tree.yview)
+            y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+            tree.configure(yscrollcommand=y_scroll.set)
+        #
+        tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # set column headers
+        self._set_table_headers(tree, headers, column_widths)
+        return tree
+
+    def _set_table_headers(self, tree, headers: list[str], column_widths: dict[str, int]):
+        for i, header in enumerate(headers):
+            tree.heading(i, text=header)
+            col_w =column_widths.get(header, None)
+            if col_w is not None:
+                logger.warning(f"Set {header} width to {col_w}")
+                tree.column(header, width=col_w)
+
+    def present_main_data(self):
+        """ Present the data to the main table.
         """
         for i, row in self.data.iterrows():
             if row["Description"] == "MTCA06":
@@ -311,12 +350,21 @@ class MainWindow(tk.Tk):
         # post the total number of entries
         self.nrecords_var.set(f"Total {self.data.shape[0]:>4d}")
 
+    def display_info(self, row):
+        ftid: int = int(row[0])
+        hit_row = self.data_info[self.data_info["Fault_ID"]==ftid]
+        # expand to rows
+        hit_df = hit_row.explode(column=self.data_info.columns[-3:].to_list()).reset_index(drop=True)
+        self.info_tree.delete(*self.info_tree.get_children())
+        for i, row in hit_df.iterrows():
+            self.info_tree.insert("", tk.END, iid=i, values=row.to_list())
+
     def refresh_table_data(self, filter: Union[str, None] = None):
         """ Re-read the data and refresh the table.
         """
-        self.data = self.read_data(filter)
+        self.data, self.data_info = self.read_data(filter)
         self.tree.delete(*self.tree.get_children())
-        self.present_table_data()
+        self.present_main_data()
 
 
 def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
