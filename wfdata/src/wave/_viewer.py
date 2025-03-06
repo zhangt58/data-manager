@@ -106,7 +106,9 @@ class MainWindow(tk.Tk):
                 _df = df_info.set_index('Fault_ID')
                 idx = _df[_df["T Window"].astype(str).str.contains(
                     "Diff 150[^0]s", regex=True)].index
-                df = df.set_index('Fault_ID').loc[idx].reset_index()
+                df1 = df.set_index('Fault_ID')
+                idx1 = df1.index[df1.index.isin(idx)]
+                df = df1.loc[idx1].reset_index()
                 self.info_var.set(DEFAULT_INFO_STRING)
         return df, df_info
 
