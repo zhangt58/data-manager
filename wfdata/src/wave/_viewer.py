@@ -52,7 +52,7 @@ class MainWindow(tk.Tk):
         self.preview_info_var = tk.StringVar()
         self.preview_info_var.set("")
         self.nrecords_var = tk.StringVar()
-        self.nrecords_var.set(f"{0:>4d} in total")
+        self.nrecords_var.set(f"Total {0:>4d}")
 
         # | ----- | ------- |
         # | Table | preview |
@@ -154,7 +154,7 @@ class MainWindow(tk.Tk):
         # all
         reload_all_btn = ttk.Button(bottom_frame1, text="Reload All",
                                     command=partial(self.on_reload, None))
-        reload_all_btn.pack(side=tk.LEFT)
+        reload_all_btn.pack(side=tk.LEFT, padx=2)
         # description = MTCA06
         reload_mtca_btn = ttk.Button(bottom_frame1, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
@@ -166,10 +166,10 @@ class MainWindow(tk.Tk):
         #
         # total entries
         nrows_lbl = ttk.Label(bottom_frame1, textvariable=self.nrecords_var)
-        nrows_lbl.pack(side=tk.LEFT, padx=10)
+        nrows_lbl.pack(side=tk.RIGHT, padx=5)
         #
         preview_info_lbl = ttk.Label(bottom_frame1, textvariable=self.preview_info_var)
-        preview_info_lbl.pack(side=tk.LEFT, padx=10)
+        preview_info_lbl.pack(side=tk.RIGHT, padx=2)
         self.preview_info_lbl = preview_info_lbl
 
         #
@@ -309,7 +309,7 @@ class MainWindow(tk.Tk):
             self.tree.insert("", tk.END, iid=i, values=row.to_list(), tags=(_tag, ))
 
         # post the total number of entries
-        self.nrecords_var.set(f"{self.data.shape[0]:>4d} in total")
+        self.nrecords_var.set(f"Total {self.data.shape[0]:>4d}")
 
     def refresh_table_data(self, filter: Union[str, None] = None):
         """ Re-read the data and refresh the table.
