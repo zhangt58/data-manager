@@ -137,7 +137,6 @@ class MainWindow(tk.Tk):
         # tag-wised style
         self.tree.tag_configure("mtca06", foreground="black")
         self.tree.tag_configure("non-mtca06", foreground="gray")
-
         self.tree.bind("<<TreeviewSelect>>", self.on_select_row)
 
         # trip info tree
@@ -147,6 +146,8 @@ class MainWindow(tk.Tk):
         self.info_tree = self.place_table(info_tree_frame, self.data_info.columns.to_list(),
                                           xscroll_on=True, yscroll_on=True,
                                           column_widths=self.column_widths)
+        self.info_tree.tag_configure("n/a", foreground="gray")
+        self.info_tree.tag_configure("valid", foreground="red")
 
         # main table data
         self.present_main_data()
@@ -357,7 +358,11 @@ class MainWindow(tk.Tk):
         hit_df = hit_row.explode(column=self.data_info.columns[-3:].to_list()).reset_index(drop=True)
         self.info_tree.delete(*self.info_tree.get_children())
         for i, row in hit_df.iterrows():
-            self.info_tree.insert("", tk.END, iid=i, values=row.to_list())
+            if row["Devices"] == "N/A":
+                _tag = "n/a"
+            else:
+                _tag = "valid"
+            self.info_tree.insert("", tk.END, iid=i, values=row.to_list(), tags=(_tag, ))
 
     def refresh_table_data(self, filter: Union[str, None] = None):
         """ Re-read the data and refresh the table.
