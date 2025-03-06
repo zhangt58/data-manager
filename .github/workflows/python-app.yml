@@ -128,7 +128,7 @@ jobs:
         python -m pip install ./dist/*.whl -U
         cd pkg
         python -m pip install -r requirements.txt
-        pyinstaller dm-wave.py --hidden-import='PIL._tkinter_finder' \
+        pyinstaller dm-wave.py --hidden-import='PIL._tkinter_finder' `
           --noconfirm --clean
         cd dist
         Compress-Archive -Path .\dm-wave -DestinationPath ..\${{ steps.set_pkgname.outputs.name }}.zip
