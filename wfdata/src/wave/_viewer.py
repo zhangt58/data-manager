@@ -136,9 +136,6 @@ class MainWindow(tk.Tk):
                                      xscroll_on=True, yscroll_on=True,
                                      column_widths=self.column_widths)
 
-        # tag-wised style
-        self.tree.tag_configure("mtca06", foreground="black")
-        self.tree.tag_configure("non-mtca06", foreground="gray")
         self.tree.bind("<<TreeviewSelect>>", self.on_select_row)
 
         # trip info tree
@@ -148,8 +145,9 @@ class MainWindow(tk.Tk):
         self.info_tree = self.place_table(info_tree_frame, self.data_info.columns.to_list(),
                                           xscroll_on=True, yscroll_on=True,
                                           column_widths=self.column_widths)
+        # tag-wised style
         self.info_tree.tag_configure("n/a", foreground="gray")
-        self.info_tree.tag_configure("valid", foreground="red")
+        self.info_tree.tag_configure("valid", foreground="#E74C3C")
 
         # main table data
         self.present_main_data()
@@ -221,8 +219,8 @@ class MainWindow(tk.Tk):
 
         # control frame
         ctrl_frame = ttk.Frame(self.right_panel)
-        ctrl_frame.grid(row=1, column=0, sticky="ew")
-        fit_btn = ttk.Button(ctrl_frame, text="Fit Image", command=self.on_fit_image)
+        ctrl_frame.grid(row=1, column=0, sticky="ew", pady=5)
+        fit_btn = ttk.Button(ctrl_frame, text="Fit", command=self.on_fit_image)
         fit_btn.pack(side=tk.LEFT, padx=5)
         #
         open_btn = ttk.Button(ctrl_frame, text="Open Opt", command=partial(self.on_open, True))
@@ -344,11 +342,7 @@ class MainWindow(tk.Tk):
         """ Present the data to the main table.
         """
         for i, row in self.data.iterrows():
-            if row["Description"] == "MTCA06":
-                _tag = "mtac06"
-            else:
-                _tag = "non-mtca06"
-            self.tree.insert("", tk.END, iid=i, values=row.to_list(), tags=(_tag, ))
+            self.tree.insert("", tk.END, iid=i, values=row.to_list())
 
         # post the total number of entries
         self.nrecords_var.set(f"Total {self.data.shape[0]:>4d}")
