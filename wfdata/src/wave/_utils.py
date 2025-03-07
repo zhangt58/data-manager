@@ -11,7 +11,6 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from typing import Literal, Union
-from scipy.io import savemat
 
 from ._log import logger
 from ._misc import _DATETIME1
