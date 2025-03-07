@@ -79,37 +79,7 @@ def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
         import ttkthemes
     except ModuleNotFoundError:
         root.style = ttk.Style()
-        #
-        # Main frame style
-        root.style.configure("TFrame", background="#f0f0f0")
-
-        # Control frame style
-        root.style.configure("ControlFrame.TFrame", background="#e0e0e0", relief="raised",
-                             borderwidth=1)
-
-        # Label frame style
-        root.style.configure("TLabelframe", background="#f0f0f0", relief="groove",
-                             borderwidth=2)
-
-        # Label frame label style
-        root.style.configure("TLabelframe.Label", font=(font_family, font_size + 10, "bold"),
-                             foreground="#333333", background="#f0f0f0")
-
-        # Style controls frame
-        root.style.configure("StyleControls.TLabelframe", background="#e8e8e8", relief="ridge",
-                             borderwidth=2)
-
-        root.style.configure("StyleControls.TLabelframe.Label", font=(font_family, font_size, "bold"),
-                             foreground="#444444", background="#e8e8e8")
-
-        # Label style
-        root.style.configure("TLabel", background="#f0f0f0", font=(font_family, font_size))
-
-        # Button style
-        root.style.configure("TButton", font=(font_family, font_size))
-
-        # Combobox style
-        root.style.configure("TCombobox", font=(font_family, font_size))
+        root.style.theme_use('default')
     else:
         root.style = ttkthemes.ThemedStyle()
         root.style.theme_use(theme_name)
@@ -119,10 +89,6 @@ def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
         font_family = _font.actual()['family']
         font_size = _font.actual()['size']
         line_height = _font.metrics()['linespace']
-
-        # font_family = "Cantarell"
-        # font_size = 10
-
         # Treeview
         root.style.configure("Treeview", rowheight=line_height)
 
