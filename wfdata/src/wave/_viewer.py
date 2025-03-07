@@ -23,11 +23,11 @@ class MainWindow(tk.Tk):
 
     def __init__(self, csv_file: str, trip_info_file: str, imags_dir: str,
                  data_dirs: list[str], fig_dpi: Union[int, None] = None,
-                 column_widths: dict = None):
+                 theme_name: str = "arc", column_widths: dict = None):
         super().__init__()
 
         # styles
-        configure_styles(self, theme_name="arc")
+        configure_styles(self, theme_name=theme_name)
 
         #  window title
         self.title("Post-mortem Data Viewer on MPS Faults")
@@ -375,9 +375,10 @@ class MainWindow(tk.Tk):
 
 
 def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
-         geometry: str = "1600x1200", fig_dpi: Union[int, None] = None, **kws):
+         geometry: str = "1600x1200", fig_dpi: Union[int, None] = None, theme_name: str = "arc",
+         **kws):
     app = MainWindow(mps_faults_path, trip_info_file, images_dir, data_dirs, fig_dpi,
-                     column_widths=kws)
+                     column_widths=kws, theme_name=theme_name)
     app.geometry(geometry)
     w, h = geometry.split("x")
     app.minsize(width=w, height=h)

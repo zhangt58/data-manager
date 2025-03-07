@@ -209,7 +209,7 @@ def _export_df_as_mat(df: pd.DataFrame, out_filepath: Path):
     """ Export df as .mat file.
     """
     from scipy.io import savemat
-    
+
     # replace the "-" to "_" for the column names, as MATLAB struct does not support strings
     # with "-" as the keys.
     df = df.rename(lambda c: c.replace("-", "_"), axis=1)
@@ -365,9 +365,9 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
     parser = argparse.ArgumentParser(
                 prog=prog,
                 description="Launch the GUI app for view the data along with MPS fault events.")
-    parser.add_argument("mps_faults_file", type=str,
+    parser.add_argument("mps_faults_file", type=str, default=None, nargs='?',
                         help="The filepath of the MPS faults event data.")
-    parser.add_argument("images_dir", type=str,
+    parser.add_argument("images_dir", type=str, default=None, nargs='?',
                         help="The directory path of the processed images.")
     parser.add_argument("--trip-info-file", dest="trip_info_file", type=str,
                         help="The .h5 file for the MPS MTCA trip info.")
@@ -381,9 +381,20 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="JSON string for the column widths of the tree view.")
     parser.add_argument("--geometry", dest="geometry", type=str, default="1600x1200",
                         help="The initial window size of the GUI.")
+    parser.add_argument("--theme", dest="theme_name", type=str, default="arc",
+                        help="The theme to style the UI, --list-themes to see options.")
+    parser.add_argument("--list-themes", action="store_true",
+                        help="List the supported UI themes.")
 
     args = parser.parse_args(sys.argv[2:])
     logger.setLevel(args.log_level)
+    if args.list_themes:
+        import ttkthemes
+        print(ttkthemes.THEMES)
+        sys.exit(0)
+    if args.mps_faults_file is None or args.images_dir is None:
+        logger.error("MPS faults file and image directory must be defined.")
+        sys.exit(1)
     run_viewer(args.mps_faults_file, args.trip_info_file, args.images_dir, args.data_dirs,
                args.geometry, args.fig_dpi, **args.col_widths)
 
