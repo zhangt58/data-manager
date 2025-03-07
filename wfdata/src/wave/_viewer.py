@@ -27,7 +27,7 @@ class MainWindow(tk.Tk):
         super().__init__()
 
         # styles
-        configure_styles(self)
+        configure_styles(self, theme_name="arc")
 
         #  window title
         self.title("Post-mortem Data Viewer on MPS Faults")
@@ -202,7 +202,7 @@ class MainWindow(tk.Tk):
         self.right_panel.rowconfigure(1, weight=0)
         self.right_panel.columnconfigure(0, weight=1)
         # image
-        img_frame = tk.Frame(self.right_panel, bg="lightgray")
+        img_frame = ttk.Frame(self.right_panel)
         img_frame.grid(row=0, column=0, sticky="nsew")
 
         _font = tk.font.nametofont("TkTextFont")
@@ -220,7 +220,7 @@ class MainWindow(tk.Tk):
         self.image_lbl.config(text="Select an event to preview the image")
 
         # control frame
-        ctrl_frame = tk.Frame(self.right_panel)
+        ctrl_frame = ttk.Frame(self.right_panel)
         ctrl_frame.grid(row=1, column=0, sticky="ew")
         fit_btn = ttk.Button(ctrl_frame, text="Fit Image", command=self.on_fit_image)
         fit_btn.pack(side=tk.LEFT, padx=5)
@@ -319,11 +319,11 @@ class MainWindow(tk.Tk):
                             show="headings", selectmode="browse")
         # scrollbars
         if xscroll_on:
-            x_scroll = tk.Scrollbar(parent_frame, orient=tk.HORIZONTAL, command=tree.xview)
+            x_scroll = ttk.Scrollbar(parent_frame, orient=tk.HORIZONTAL, command=tree.xview)
             x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
             tree.configure(xscrollcommand=x_scroll.set)
         if yscroll_on:
-            y_scroll = tk.Scrollbar(parent_frame, orient=tk.VERTICAL, command=tree.yview)
+            y_scroll = ttk.Scrollbar(parent_frame, orient=tk.VERTICAL, command=tree.yview)
             y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
             tree.configure(yscrollcommand=y_scroll.set)
         #

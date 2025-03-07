@@ -17,10 +17,11 @@ class FigureWindow(tk.Tk):
                  **kws):
         super().__init__()
 
+        # styles
+        configure_styles(self, theme_name="arc")
+        #
         self.title(window_title)
         self.protocol("WM_DELETE_WINDOW", self.quit)
-
-        configure_styles(self)
 
         # Create a frame for the figures
         frame = ttk.Frame(self)
@@ -45,7 +46,7 @@ class FigureWindow(tk.Tk):
         # notes area
         notes_text = tk.Text(bottom_frame, height=3)
         notes_text.insert("1.0", notes)
-        notes_text.config(state="disabled")
+        notes_text.config(state="disable")
         notes_text.pack(side="left", fill=tk.X, pady=pady, expand=True)
         # quit button
         quit_btn = ttk.Button(bottom_frame, text="Quit", command=self.quit)
@@ -73,45 +74,57 @@ class FigureWindow(tk.Tk):
         tb.update()
 
 
-def configure_styles(root: tk.Tk):
-    root.style = ttk.Style()
-    font_family = "Cantarell"
-    font_size = 10
-    # Main frame style
-    root.style.configure("TFrame", background="#f0f0f0")
+def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
+    try:
+        import ttkthemes
+    except ModuleNotFoundError:
+        root.style = ttk.Style()
+        #
+        # Main frame style
+        root.style.configure("TFrame", background="#f0f0f0")
 
-    # Control frame style
-    root.style.configure("ControlFrame.TFrame", background="#e0e0e0", relief="raised",
-                         borderwidth=1)
+        # Control frame style
+        root.style.configure("ControlFrame.TFrame", background="#e0e0e0", relief="raised",
+                             borderwidth=1)
 
-    # Label frame style
-    root.style.configure("TLabelframe", background="#f0f0f0", relief="groove",
-                         borderwidth=2)
+        # Label frame style
+        root.style.configure("TLabelframe", background="#f0f0f0", relief="groove",
+                             borderwidth=2)
 
-    # Label frame label style
-    root.style.configure("TLabelframe.Label", font=(font_family, font_size + 10, "bold"),
-                         foreground="#333333", background="#f0f0f0")
+        # Label frame label style
+        root.style.configure("TLabelframe.Label", font=(font_family, font_size + 10, "bold"),
+                             foreground="#333333", background="#f0f0f0")
 
-    # Style controls frame
-    root.style.configure("StyleControls.TLabelframe", background="#e8e8e8", relief="ridge",
-                         borderwidth=2)
+        # Style controls frame
+        root.style.configure("StyleControls.TLabelframe", background="#e8e8e8", relief="ridge",
+                             borderwidth=2)
 
-    root.style.configure("StyleControls.TLabelframe.Label", font=(font_family, font_size, "bold"),
-                         foreground="#444444", background="#e8e8e8")
+        root.style.configure("StyleControls.TLabelframe.Label", font=(font_family, font_size, "bold"),
+                             foreground="#444444", background="#e8e8e8")
 
-    # Label style
-    root.style.configure("TLabel", background="#f0f0f0", font=(font_family, font_size))
+        # Label style
+        root.style.configure("TLabel", background="#f0f0f0", font=(font_family, font_size))
 
-    # Button style
-    root.style.configure("TButton", font=(font_family, font_size))
+        # Button style
+        root.style.configure("TButton", font=(font_family, font_size))
 
-    # Combobox style
-    root.style.configure("TCombobox", font=(font_family, font_size))
+        # Combobox style
+        root.style.configure("TCombobox", font=(font_family, font_size))
+    else:
+        root.style = ttkthemes.ThemedStyle()
+        root.style.theme_use(theme_name)
+    finally:
+        # adjust the row height of Treeview
+        _font = tk.font.nametofont("TkTextFont")
+        font_family = _font.actual()['family']
+        font_size = _font.actual()['size']
+        line_height = _font.metrics()['linespace']
 
-    # Treeview
-    font = Font(family=font_family, size=font_size)
-    line_height = font.metrics()['linespace']
-    root.style.configure("Treeview", rowheight=line_height)
+        # font_family = "Cantarell"
+        # font_size = 10
+
+        # Treeview
+        root.style.configure("Treeview", rowheight=line_height)
 
 
 if __name__ == "__main__":
