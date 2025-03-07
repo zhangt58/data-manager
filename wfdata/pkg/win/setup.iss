@@ -37,7 +37,7 @@ Source: "run-dm-app.bat"; DestDir: "{app}"
 
 [Run]
 // User selected... these files are shown for launch after everything is done
-Filename: "{app}\run-dm-app.bat"; WorkingDir: "{app}"; Description: Launch the viewer app for BCM/BPM waveform data; Flags: postinstall runascurrentuser skipifsilent;
+Filename: "{app}\run-dm-app.bat"; WorkingDir: "{app}"; Description: Launch the viewer app for BCM/BPM waveform data; Flags: postinstall runascurrentuser skipifsilent runhidden;
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\run-dm-app.bat"; WorkingDir: "{app}"; Comment: "Launch {#MyAppName}"
