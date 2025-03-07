@@ -32,7 +32,7 @@ SetupIconFile=.\icon.ico
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: ".\dm-wave\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\dm-wave\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "run-dm-app.bat"; DestDir: "{app}"
 
 [Run]

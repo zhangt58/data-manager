@@ -96,6 +96,7 @@ jobs:
       run: |
         # Extract the version from the Git tag (e.g., v1.0.0 -> 1.0.0)
         ver=${GITHUB_REF#refs/tags/v}
+        echo "version=${ver}" >> $GITHUB_OUTPUT
         echo "name=dm-wave_v${ver}_Windows_py${{ matrix.py }}" >> $GITHUB_OUTPUT  # Make the version available to subsequent steps
 
     - name: Set up Python ${{ matrix.py }}
@@ -134,6 +135,12 @@ jobs:
         cd dist
         Compress-Archive -Path .\dm-wave -DestinationPath ..\${{ steps.set_pkgname.outputs.name }}.zip
 
+    - name: Create Inno Setup Installer
+      uses: Minionguyjpro/Inno-Setup-Action@v1.2.5
+      with:
+        path: .\wfdata\pkg\win\setup.iss
+        options: /O+
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -141,3 +148,9 @@ jobs:
         path: .\wfdata\pkg\${{ steps.set_pkgname.outputs.name }}.zip
         retention-days: 7
 
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Bundled installer - Windows Python ${{ matrix.py }}
+        path: .\wfdata\pkg\win\output\DataManager-Wave_{{ steps.set_pkgname.outputs.version }}.exe
+        retention-days: 7
