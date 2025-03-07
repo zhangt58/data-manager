@@ -335,7 +335,7 @@ class MainWindow(tk.Tk):
             tree.heading(i, text=header)
             col_w =column_widths.get(header, None)
             if col_w is not None:
-                logger.warning(f"Set {header} width to {col_w}")
+                logger.debug(f"Set {header} width to {col_w}")
                 tree.column(header, width=col_w)
 
     def present_main_data(self):
