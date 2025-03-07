@@ -173,8 +173,8 @@ def plot(df: pd.DataFrame, t0: str, title: str):
 
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(14, 9), dpi=110)
 
-    xylabel_fontdict = {"size": 14, "family": "Cantarell"}
-    xyticks_fontdict = {"size": 13, "family": "Cantarell"}
+    xylabel_fontdict = {"size": 14, "family": "sans-serif"}
+    xyticks_fontdict = {"size": 13, "family": "sans-serif"}
     grid_color = "#7F8C8D"
 
     # BCM
@@ -188,8 +188,8 @@ def plot(df: pd.DataFrame, t0: str, title: str):
         # show NO DATA
         _plot_no_data(ax1)
 
-    ax1.set_ylabel("Intensity [a.u.]")
-    ax1.set_title(title, fontsize=16, fontfamily="Cantarell")
+    ax1.set_ylabel("Current $[\mu A]$")
+    ax1.set_title(title, fontsize=16, fontfamily="sans-serif")
 
     ax1r = ax1.twinx()
     npermit_col = [c for c in df.columns if c.endswith('NPERMIT')][0]
@@ -216,7 +216,7 @@ def plot(df: pd.DataFrame, t0: str, title: str):
             df.plot(x='t_us', y=bpm_pha_cols, ax=ax3)
     else:
         _plot_no_data(ax3)
-    ax2.set_ylabel("Intensity [a.u.]")
+    ax2.set_ylabel("Magnitude [mVpp]")
     ax3.set_xlabel("Time $[\mu s]$")
     ax3.set_ylabel("$\Phi [^o]$ @ 80.5 MHz")
     ax3.annotate(f"$T_0$ = {t0}", (0, -0.3), xycoords='axes fraction',
