@@ -63,7 +63,7 @@ jobs:
         cd pkg
         python -m pip install -r requirements.txt
         pyinstaller dm-wave.py --hidden-import='PIL._tkinter_finder' \
-          --noconfirm --clean
+          --noconfirm --clean --icon ./icons/icon.ico
         cd dist && tar cv dm-wave | xz -9 > ../${{ steps.set_pkgname.outputs.name }}.tar.xz
 
     - name: Upload artifacts
@@ -130,7 +130,7 @@ jobs:
         python -m pip install -r requirements.txt
         pyinstaller dm-wave.py --hidden-import='PIL._tkinter_finder' `
           --exclude-module scipy `
-          --noconfirm --clean
+          --noconfirm --clean --icon ./icons/icon.ico
         cd dist
         Compress-Archive -Path .\dm-wave -DestinationPath ..\${{ steps.set_pkgname.outputs.name }}.zip
 
