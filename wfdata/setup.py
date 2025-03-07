@@ -17,6 +17,7 @@ install_requires = [
     "matplotlib>=3.6,<3.7",
     "tables>=3.7,<4.0",
     "openpyxl>=3.0,<3.2",
+    "ttkthemes",
 ]
 
 
