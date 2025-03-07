@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from functools import partial
+from pathlib import Path
 from typing import Union
 
 from ._log import logger
@@ -49,7 +50,7 @@ def _process_format_v1(store):
     logger.info(f"Reading {store.filename} per format v1")
     df_t0 = store['/t0']
     df_grp = store['/grp']
-    df_info = store['/info']
+    # df_info = store['/info']
     df_bcm = store['/bcm'].T
     df_bpm = store['/bpm'].T
 
@@ -84,7 +85,7 @@ def _process_format_v1(store):
     return bcm_dfs + bpm_dfs, bpm_names
 
 
-def read_data(filepath: str,
+def read_data(filepath: Union[str, Path],
               t_range: Union[tuple[int, int], None] = (-800, 400)):
     """ Read and consolidate dataset.
     """
@@ -108,7 +109,7 @@ def read_data(filepath: str,
     # find the first index loc (int) that npermit goes high (1)
     # find the first occurence of BCM?_NPERMIT that with high bits, and drop others
     # if none is found, throw out error
-    npermit_col: str = None
+    npermit_col: Union[str, None] = None
     for c in npermit_names:
         if c not in df_all.columns:
             continue
@@ -240,7 +241,6 @@ def plot(df: pd.DataFrame, t0: str, title: str):
 
 
 if __name__ == "__main__":
-    from pathlib import Path
 
     fault_id = "23635"
     filepath = Path(f"test1/{fault_id}.h5")

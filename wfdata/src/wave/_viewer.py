@@ -76,7 +76,7 @@ class MainWindow(tk.Tk):
         self.create_table_panel()
         self.create_preview_panel()
 
-    def read_data(self, filter: Union[str, None] = None) -> pd.DataFrame:
+    def read_data(self, filter: Union[str, None] = None) -> tuple[pd.DataFrame, Union[pd.DataFrame, None]]:
         """ Read a list or rows data from *csv_file*.
         # filter the "Description" column: MTCA06
         # filter the "T Window" column: 150us
@@ -274,7 +274,7 @@ class MainWindow(tk.Tk):
                         "Opening the figure with the opt data"
             subprocess.Popen(cmdline, shell=True)
 
-    def find_data_path(self, ftid: int, is_opt: bool = True) -> Path:
+    def find_data_path(self, ftid: int, is_opt: bool = True) -> Union[Path, None]:
         glob_pattern = f"{ftid}_opt.h5" if is_opt else f"*{ftid}.h5"
         for d in self.data_dirs:
             for pth in d.rglob(glob_pattern):
@@ -282,7 +282,7 @@ class MainWindow(tk.Tk):
                     return pth
         return None
 
-    def find_image_path(self, ftid: int) -> Path:
+    def find_image_path(self, ftid: int) -> Union[Path, None]:
         glob_pattern = f"*{ftid}_opt.png"
         for pth in self.images_dirpath.rglob(glob_pattern):
             if pth.is_file():
@@ -298,11 +298,11 @@ class MainWindow(tk.Tk):
         self.on_fit_image()
 
     def display_figure(self, row):
-        ftid: str = row[0]
+        ftid: int = int(row[0])
         img_filepath = self.find_image_path(ftid)
         if img_filepath is not None:
-            self.loaded_image_ftid = int(ftid)
-            self.loaded_image_var.set(img_filepath)
+            self.loaded_image_ftid = ftid
+            self.loaded_image_var.set(str(img_filepath))
             self.preview_info_var.set(f"Event on Preview: {ftid}")
             self.info_var.set(DEFAULT_INFO_STRING)
         else:
@@ -375,7 +375,7 @@ def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: 
                      column_widths=kws, theme_name=theme_name)
     app.geometry(geometry)
     w, h = geometry.split("x")
-    app.minsize(width=w, height=h)
+    app.minsize(width=int(w), height=int(h))
     logger.info(f"Set the initial size {geometry}")
     app.mainloop()
 

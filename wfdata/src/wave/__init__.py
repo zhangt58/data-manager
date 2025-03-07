@@ -1,21 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
 import sys
-
 from ._tools import (
     convert_tool,
     merge_tool,
     plot_tool,
     view_tool,
-)
-from ._utils import (
-    group_datafiles,
-    read_path,
-)
-from ._data import (
-    plot,
-    read_data,
 )
 from ._ver import _version
 
@@ -27,14 +17,12 @@ __contact__ = "Tong Zhang <zhangt@frib.msu.edu>"
 __version__ = _version
 __title__ = "DataManager: Manage the Accelerator Data"
 
-
 TOOLS = {
     'merge': merge_tool,
     'plot': plot_tool,
     'convert': convert_tool,
     'view': view_tool
 }
-
 
 _help_msg = """Usage: wf-wave [-h] [-v] {merge,plot,convert} ...
 
@@ -58,6 +46,7 @@ Valid tools:
   plot       Generate images from the converted BCM/BPM waveform dataset files
   view       GUI app for view data and images
 """
+
 
 def main():
     """ The main command for other tools

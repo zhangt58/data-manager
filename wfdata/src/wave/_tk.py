@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import tkinter as tk
 from tkinter import ttk
-from tkinter.font import Font
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -46,7 +45,7 @@ class FigureWindow(tk.Tk):
         # notes area
         notes_text = tk.Text(bottom_frame, height=3)
         notes_text.insert("1.0", notes)
-        notes_text.config(state="disable")
+        notes_text.config(state="disabled")
         notes_text.pack(side="left", fill=tk.X, pady=pady, expand=True)
         # quit button
         quit_btn = ttk.Button(bottom_frame, text="Quit", command=self.quit)
@@ -86,8 +85,8 @@ def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
     finally:
         # adjust the row height of Treeview
         _font = tk.font.nametofont("TkTextFont")
-        font_family = _font.actual()['family']
-        font_size = _font.actual()['size']
+        # font_family = _font.actual()['family']
+        # font_size = _font.actual()['size']
         line_height = _font.metrics()['linespace']
         # Treeview
         root.style.configure("Treeview", rowheight=line_height)
