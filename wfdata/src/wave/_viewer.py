@@ -4,7 +4,11 @@
 import pandas as pd
 import subprocess
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import (
+    ttk,
+    messagebox,
+    scrolledtext,
+)
 from pathlib import Path
 from functools import partial
 from typing import Union
@@ -186,10 +190,42 @@ class MainWindow(tk.Tk):
         self.preview_info_lbl = preview_info_lbl
 
         #
+        # info button
+        info_btn = ttk.Button(ctrl_frame2, text=u"\N{INFORMATION SOURCE}",
+                              width=1, command=lambda:self.on_about(self))
+        info_btn.pack(side=tk.LEFT, padx=2)
         # info label
         info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
         info_lbl.pack(fill=tk.X, padx=10)
         self.info_lbl = info_lbl
+
+    def on_about(self, parent):
+        about_dialog = tk.Toplevel(parent)
+        about_dialog.title("About DM-Wave")
+
+        text_area = scrolledtext.ScrolledText(about_dialog, wrap=tk.WORD,
+                                              width=50, height=15)
+        text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        # Insert your about information into the text area
+        about_text = f"""Data Manager - Wave
+Version {_version}
+
+This app is developed to manage the post-mortem BCM/BPM waveform data on MPS trip events, and
+provide the tools for post-processing and data visualization.
+
+This is the GUI app for browsing the data in images along with the MPS trip event information.
+
+Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
+        text_area.insert(tk.END, about_text)
+        text_area.config(state=tk.DISABLED)  # Make it read-only
+
+        close_button = ttk.Button(about_dialog, text="Close", command=about_dialog.destroy)
+        close_button.pack(pady=5)
+
+        about_dialog.transient(parent)  # Make it a dialog window
+        about_dialog.grab_set()  # Ensure user interaction only with the dialog
+        parent.wait_window(about_dialog)  # Wait until the dialog is closed
 
     def create_preview_panel(self):
         # right panel
