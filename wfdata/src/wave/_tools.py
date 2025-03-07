@@ -11,7 +11,6 @@ import pandas as pd
 
 from datetime import datetime
 from pathlib import Path
-from scipy.io import savemat
 from typing import Union
 
 from ._utils import (
@@ -209,6 +208,8 @@ def export_df(df: pd.DataFrame, outdir: Path, out_filename: str,
 def _export_df_as_mat(df: pd.DataFrame, out_filepath: Path):
     """ Export df as .mat file.
     """
+    from scipy.io import savemat
+    
     # replace the "-" to "_" for the column names, as MATLAB struct does not support strings
     # with "-" as the keys.
     df = df.rename(lambda c: c.replace("-", "_"), axis=1)
