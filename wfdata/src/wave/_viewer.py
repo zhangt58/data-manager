@@ -306,12 +306,17 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                       f"dm-wave plot -i {data_path}"
             if self.fig_dpi is not None:
                 cmdline += f" --fig-dpi {self.fig_dpi}"
-            _info_msg = "Opening the figure with the raw data" if not is_opt else \
-                        "Opening the figure with the opt data"
+            _info_msg = f"Ploting with the {data_path} (raw)" if not is_opt else \
+                        f"Ploting with the {data_path} (opt)"
+            logger.info(_info_msg)
             subprocess.Popen(cmdline, shell=True)
+        else:
+            _s = "opt" if is_opt else "raw"
+            logger.warning(
+                    f"Not found the {_s} data file for {self.loaded_image_ftid}.")
 
     def find_data_path(self, ftid: int, is_opt: bool = True) -> Union[Path, None]:
-        glob_pattern = f"{ftid}_opt.h5" if is_opt else f"*{ftid}.h5"
+        glob_pattern = f"*{ftid}_opt.h5" if is_opt else f"*{ftid}.h5"
         for d in self.data_dirs:
             for pth in d.rglob(glob_pattern):
                 if pth.is_file():
