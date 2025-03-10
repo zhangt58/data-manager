@@ -256,7 +256,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         # control frame
         ctrl_frame = ttk.Frame(self.right_panel)
         ctrl_frame.grid(row=1, column=0, sticky="ew", pady=5)
-        fit_btn = ttk.Button(ctrl_frame, text="Fit", command=self.on_fit_image)
+        fit_btn = ttk.Button(ctrl_frame, text="Fit", command=self.on_fit_image,
+                             width=4)
         fit_btn.pack(side=tk.LEFT, padx=5)
         #
         open_btn = ttk.Button(ctrl_frame, text="Open Opt", command=partial(self.on_open, True))
