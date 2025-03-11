@@ -433,8 +433,9 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             self.info_var.set(DEFAULT_INFO_STRING)
             self.info_lbl.config(foreground=self.lbl_sty_fg)
         else:
-            logger.warning(f"Not found the image for {ftid}")
-            self.info_var.set(f"No image found for ID {ftid}")
+            msg = f"No image found for ID {ftid}"
+            logger.warning(msg)
+            self.info_var.set(msg)
             self.info_lbl.config(foreground=RED_COLOR_HEX)
 
     def place_table(self, parent_frame, headers: list[str],
