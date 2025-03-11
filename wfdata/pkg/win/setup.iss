@@ -5,7 +5,7 @@
 
 
 #define MyAppName "DM-Wave"
-#define MyAppVersion "0.9.5"
+#define MyAppVersion "0.9.5-1"
 #define MyAppPublisher "FRIB, MSU"
 #define MyAppURL "https://stash.frib.msu.edu/projects/PHYAPP/repos/phantasy-apps"
 #define OutputName "DataManager-Wave"
