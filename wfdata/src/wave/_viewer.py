@@ -21,6 +21,7 @@ from ._ver import _version
 LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
 MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
 DEFAULT_INFO_STRING = f"DM-Wave Viewer v{_version}"
+RED_COLOR_HEX = "#E74C3C"
 
 
 class MainWindow(tk.Tk):
@@ -151,7 +152,7 @@ class MainWindow(tk.Tk):
                                           column_widths=self.column_widths)
         # tag-wised style
         self.info_tree.tag_configure("n/a", foreground="gray")
-        self.info_tree.tag_configure("valid", foreground="#E74C3C")
+        self.info_tree.tag_configure("valid", foreground=RED_COLOR_HEX)
 
         # main table data
         self.present_main_data()
@@ -286,7 +287,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             items = self.tree.item(_row, "values")
             # show the figure if available
             self.display_figure(items)
-            logger.debug(f"Selected {_row}: {items}, {self.data.iloc[int(_row)]}")
+            logger.debug(f"Selected {_row}: {items}, {self.data.iloc[int(_row)].to_list()}")
             # show the trip info
             self.display_info(items)
 
@@ -347,9 +348,11 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             self.loaded_image_var.set(str(img_filepath))
             self.preview_info_var.set(f"Event on Preview: {ftid}")
             self.info_var.set(DEFAULT_INFO_STRING)
+            self.info_lbl.config(foreground="black")
         else:
             logger.warning(f"Not found the image for {ftid}")
-            self.info_var.set(f"No image found for MPS fault ID {ftid}")
+            self.info_var.set(f"No image found for ID {ftid}")
+            self.info_lbl.config(foreground=RED_COLOR_HEX)
 
     def place_table(self, parent_frame, headers: list[str],
                     xscroll_on: bool = True, yscroll_on: bool = True,
