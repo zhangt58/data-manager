@@ -373,17 +373,26 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         return tree
 
     def _set_table_headers(self, tree, headers: list[str], column_widths: dict[str, int]):
+        anchor_map = {
+            "Fault_ID": tk.CENTER,
+            "Power": tk.E,
+            "Destination": tk.CENTER,
+            "Devices": tk.CENTER,
+        }
+        anchor_default = tk.W
         for i, header in enumerate(headers):
             tree.heading(i, text=header)
             col_w =column_widths.get(header, None)
             if col_w is not None:
                 logger.debug(f"Set {header} width to {col_w}")
-                tree.column(header, width=col_w)
+                tree.column(header, width=col_w,
+                            anchor=anchor_map.get(header, anchor_default))
 
     def present_main_data(self):
         """ Present the data to the main table.
         """
         for i, row in self.data.iterrows():
+            row.Power = f"{row.Power/1e3:.2f} kW" if row.Power > 1e3 else f"{int(row.Power)} W"
             self.tree.insert("", tk.END, iid=i, values=row.to_list())
 
         # post the total number of entries
