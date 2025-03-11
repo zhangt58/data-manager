@@ -179,7 +179,7 @@ class MainWindow(tk.Tk):
         ctrl_frame1 = ttk.Frame(ctrl_frame)
         ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
         ctrl_frame2 = ttk.Frame(ctrl_frame)
-        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=5, pady=5)
+        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=5, pady=2)
         # all
         reload_all_btn = ttk.Button(ctrl_frame1, text="Reload All",
                                     command=partial(self.on_reload, None))
@@ -241,7 +241,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
     def create_preview_panel(self):
         # right panel
         # |- image label
-        # |- [fit]   [Data][Open Raw][Open Opt]
+        # |- [fit]   [Plot Raw]  [Plot Opt]
+        # |-         [Get Raw ]  [Get Opt ]
 
         self.right_panel.rowconfigure(0, weight=1)
         self.right_panel.rowconfigure(1, weight=0)
@@ -271,16 +272,16 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         ctrl_frame1 = ttk.Frame(ctrl_frame)
         ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
         ctrl_frame2 = ttk.Frame(ctrl_frame)
-        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=5, pady=5)
+        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=5, pady=2)
         #
         # fit image size
         fit_btn = ttk.Button(ctrl_frame1, text="Fit", command=self.on_fit_image,
                              width=4)
         fit_btn.pack(side=tk.LEFT, padx=5)
         # plot
-        open_btn = ttk.Button(ctrl_frame1, text="Open Opt", command=partial(self.on_open, True))
+        open_btn = ttk.Button(ctrl_frame1, text="Plot Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=5)
-        open1_btn = ttk.Button(ctrl_frame1, text="Open Raw", command=partial(self.on_open, False))
+        open1_btn = ttk.Button(ctrl_frame1, text="Plot Raw", command=partial(self.on_open, False))
         open1_btn.pack(side=tk.RIGHT, padx=10)
 
         # data/image info
@@ -289,9 +290,9 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.img_info_lbl = img_info_lbl
 
         # get data
-        opt_data_btn = ttk.Button(ctrl_frame2, text="Data Opt", command=partial(self.on_get_data, True))
+        opt_data_btn = ttk.Button(ctrl_frame2, text="Get Opt", command=partial(self.on_get_data, True))
         opt_data_btn.pack(side=tk.RIGHT, padx=5)
-        raw_data_btn = ttk.Button(ctrl_frame2, text="Data Raw", command=partial(self.on_get_data, False))
+        raw_data_btn = ttk.Button(ctrl_frame2, text="Get Raw", command=partial(self.on_get_data, False))
         raw_data_btn.pack(side=tk.RIGHT, padx=10)
 
     def on_get_data(self, is_opt: bool):
@@ -318,7 +319,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                     if platform.system() == "Windows":
                         _cmd = f"explorer /select,{dst_pth}"
                         logger.info(f"Revealing with {_cmd} ...")
-                        subprocess.call(_cmd, shell=True)
+                        subprocess.Popen(_cmd, shell=True)
             else:
                 messagebox.showwarning(
                     title="Download Data",
