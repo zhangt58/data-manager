@@ -317,6 +317,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                 if r == messagebox.OK:
                     if platform.system() == "Windows":
                         _cmd = f"explorer /select,{dst_pth}"
+                        logger.info(f"Revealing with {_cmd} ...")
                         subprocess.call(_cmd, shell=True)
             else:
                 messagebox.showwarning(
