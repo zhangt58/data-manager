@@ -4,6 +4,7 @@
 import pandas as pd
 import shutil
 import subprocess
+import sys
 import platform
 import tkinter as tk
 from tkinter import (
@@ -34,11 +35,17 @@ class MainWindow(tk.Tk):
 
     def __init__(self, csv_file: str, trip_info_file: str, imags_dir: str,
                  data_dirs: list[str], fig_dpi: Union[int, None] = None,
-                 theme_name: str = "arc", column_widths: dict = None):
+                 theme_name: str = "arc", icon_path: Union[str, None] = None,
+                 column_widths: dict = None):
         super().__init__()
 
         # styles
         configure_styles(self, theme_name=theme_name)
+
+        if icon_path is not None:
+            self.iconbitmap(icon_path)
+        else:
+            self.iconbitmap(sys.executable)
 
         self.lbl_sty_fg = self.style.lookup("TLabel", "foreground")
 
@@ -522,9 +529,11 @@ def save_data(src_file_path: Path) -> tuple[Union[Path, None], Union[str, None]]
 
 def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
          geometry: str = "1600x1200", fig_dpi: Union[int, None] = None, theme_name: str = "arc",
-         **kws):
+         icon_path: Union[str, None] = None, **kws):
+    print(mps_faults_path, trip_info_file, images_dir, data_dirs, geometry, fig_dpi, theme_name,
+          icon_path, kws)
     app = MainWindow(mps_faults_path, trip_info_file, images_dir, data_dirs, fig_dpi,
-                     column_widths=kws, theme_name=theme_name)
+                     theme_name, icon_path, column_widths=kws)
     app.geometry(geometry)
     w, h = geometry.split("x")
     app.minsize(width=int(w), height=int(h))

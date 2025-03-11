@@ -384,6 +384,8 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="The theme to style the UI, --list-themes to see options.")
     parser.add_argument("--list-themes", action="store_true",
                         help="List the supported UI themes.")
+    parser.add_argument("--icon", dest="icon_path",
+                        help="Set the icon.")
 
     args = parser.parse_args(sys.argv[2:])
     logger.setLevel(args.log_level)
@@ -395,7 +397,8 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
         logger.error("MPS faults file and image directory must be defined.")
         sys.exit(1)
     run_viewer(args.mps_faults_file, args.trip_info_file, args.images_dir, args.data_dirs,
-               args.geometry, args.fig_dpi, **args.col_widths)
+               args.geometry, args.fig_dpi, args.theme_name,
+               args.icon_path, **args.col_widths)
 
 
 def gen_figure(data_filepath: Path, figure_types: list[str],
