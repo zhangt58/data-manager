@@ -29,6 +29,8 @@ RED_COLOR_HEX = "#E74C3C"
 
 # data path cache: {id-o: path, id-r: path, ...}
 DATA_PATH_CACHE = {}
+# is running on Windows?
+_IS_WIN_PLATFORM = platform.system() == "Windows"
 
 
 class MainWindow(tk.Tk):
@@ -45,7 +47,8 @@ class MainWindow(tk.Tk):
         if icon_path is not None:
             self.iconbitmap(icon_path)
         else:
-            self.iconbitmap(sys.executable)
+            if _IS_WIN_PLATFORM:
+                self.iconbitmap(sys.executable)
 
         self.lbl_sty_fg = self.style.lookup("TLabel", "foreground")
 
@@ -220,10 +223,13 @@ class MainWindow(tk.Tk):
     def on_about(self, parent):
         about_dialog = tk.Toplevel(parent)
         about_dialog.title("About DM-Wave")
-
-        text_area = scrolledtext.ScrolledText(about_dialog, wrap=tk.WORD,
+        #
+        frame = ttk.Frame(about_dialog)
+        frame.pack(expand=True, fill=tk.BOTH)
+        #
+        text_area = scrolledtext.ScrolledText(frame, wrap=tk.WORD,
                                               width=50, height=15)
-        text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        text_area.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
 
         # Insert your about information into the text area
         about_text = f"""Data Manager - Wave
@@ -238,11 +244,21 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         text_area.insert(tk.END, about_text)
         text_area.config(state=tk.DISABLED)  # Make it read-only
 
-        close_button = ttk.Button(about_dialog, text="Close", command=about_dialog.destroy)
+        close_button = ttk.Button(frame, text="Close", command=about_dialog.destroy)
         close_button.pack(pady=5)
+
+
+        # position on top of the middle of the main
+        w0, h0 = 800, 600
+        main_w, main_h = parent.winfo_width(), parent.winfo_height()
+        main_x, main_y = parent.winfo_x(), parent.winfo_y()
+        x = main_x + (main_w - w0) // 2
+        y = main_y + (main_h - h0) // 2
+        about_dialog.geometry(f"{w0}x{h0}+{x}+{y}")
 
         about_dialog.transient(parent)  # Make it a dialog window
         about_dialog.grab_set()  # Ensure user interaction only with the dialog
+        #
         parent.wait_window(about_dialog)  # Wait until the dialog is closed
 
     def create_preview_panel(self):
@@ -323,7 +339,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                       detail=f"Saved as {dst_pth}",
                       type=messagebox.OKCANCEL)
                 if r == messagebox.OK:
-                    if platform.system() == "Windows":
+                    if _IS_WIN_PLATFORM:
                         _cmd = f"explorer /select,{dst_pth}"
                         logger.info(f"Revealing {dst_pth} in File Explorer")
                         subprocess.Popen(_cmd, shell=True)
@@ -531,8 +547,6 @@ def save_data(src_file_path: Path) -> tuple[Union[Path, None], Union[str, None]]
 def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
          geometry: str = "1600x1200", fig_dpi: Union[int, None] = None, theme_name: str = "arc",
          icon_path: Union[str, None] = None, **kws):
-    print(mps_faults_path, trip_info_file, images_dir, data_dirs, geometry, fig_dpi, theme_name,
-          icon_path, kws)
     app = MainWindow(mps_faults_path, trip_info_file, images_dir, data_dirs, fig_dpi,
                      theme_name, icon_path, column_widths=kws)
     app.geometry(geometry)
