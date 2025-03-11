@@ -318,7 +318,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                 if r == messagebox.OK:
                     if platform.system() == "Windows":
                         _cmd = f"explorer /select,{dst_pth}"
-                        logger.info(f"Revealing with {_cmd} ...")
+                        logger.info(f"Revealing {dst_pth} in File Explorer")
                         subprocess.Popen(_cmd, shell=True)
             else:
                 messagebox.showwarning(
@@ -498,7 +498,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.present_main_data()
 
 
-def save_data(src_file_path: Path) -> tuple[Path, Union[str, None]]:
+def save_data(src_file_path: Path) -> tuple[Union[Path, None], Union[str, None]]:
     initial_dir = Path("~").expanduser().joinpath("Downloads")
     dst_file_path = filedialog.asksaveasfilename(
             title="Save As",
@@ -509,6 +509,7 @@ def save_data(src_file_path: Path) -> tuple[Path, Union[str, None]]:
     )
     if not dst_file_path:
         return None, None
+    dst_file_path = Path(dst_file_path)
     try:
         shutil.copy2(src_file_path, dst_file_path)
     except Exception as e:
