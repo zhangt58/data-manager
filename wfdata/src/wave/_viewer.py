@@ -6,6 +6,7 @@ import subprocess
 import tkinter as tk
 from tkinter import (
     ttk,
+    filedialog,
     messagebox,
     scrolledtext,
 )
@@ -23,6 +24,9 @@ MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
 DEFAULT_INFO_STRING = f"DM-Wave Viewer v{_version}"
 RED_COLOR_HEX = "#E74C3C"
 
+# data path cache: {id-o: path, id-r: path, ...}
+DATA_PATH_CACHE = {}
+
 
 class MainWindow(tk.Tk):
 
@@ -33,6 +37,8 @@ class MainWindow(tk.Tk):
 
         # styles
         configure_styles(self, theme_name=theme_name)
+
+        self.lbl_sty_fg = self.style.lookup("TLabel", "foreground")
 
         #  window title
         self.title("Post-mortem Data Viewer on MPS Faults")
@@ -51,13 +57,16 @@ class MainWindow(tk.Tk):
         self.column_widths = {} if column_widths is None else column_widths
         self.fig_dpi= fig_dpi
 
-        #
+        # info for faults table panel
         self.info_var = tk.StringVar()
         self.info_var.set(DEFAULT_INFO_STRING)
         self.preview_info_var = tk.StringVar()
         self.preview_info_var.set("")
         self.nrecords_var = tk.StringVar()
         self.nrecords_var.set(f"Total {0:>4d}")
+        # info for image panel
+        self.img_info_var = tk.StringVar()
+        self.img_info_var.set("")
 
         # | --L-- | ---R--- |
         # | Table | preview |
@@ -190,14 +199,13 @@ class MainWindow(tk.Tk):
         preview_info_lbl.pack(side=tk.RIGHT, padx=10)
         self.preview_info_lbl = preview_info_lbl
 
-        #
         # info button
         info_btn = ttk.Button(ctrl_frame2, text=u"\N{INFORMATION SOURCE}",
                               width=1, command=lambda:self.on_about(self))
         info_btn.pack(side=tk.LEFT, padx=2)
         # info label
         info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
-        info_lbl.pack(fill=tk.X, padx=10)
+        info_lbl.pack(side=tk.LEFT, fill=tk.X, padx=5)
         self.info_lbl = info_lbl
 
     def on_about(self, parent):
@@ -231,7 +239,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
     def create_preview_panel(self):
         # right panel
         # |- image label
-        # |- [fit]   [Open Raw] [Open Opt]
+        # |- [fit]   [Data][Open Raw][Open Opt]
 
         self.right_panel.rowconfigure(0, weight=1)
         self.right_panel.rowconfigure(1, weight=0)
@@ -257,14 +265,43 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         # control frame
         ctrl_frame = ttk.Frame(self.right_panel)
         ctrl_frame.grid(row=1, column=0, sticky="ew", pady=5)
-        fit_btn = ttk.Button(ctrl_frame, text="Fit", command=self.on_fit_image,
+        #
+        ctrl_frame1 = ttk.Frame(ctrl_frame)
+        ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
+        ctrl_frame2 = ttk.Frame(ctrl_frame)
+        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=5, pady=5)
+        #
+        # fit image size
+        fit_btn = ttk.Button(ctrl_frame1, text="Fit", command=self.on_fit_image,
                              width=4)
         fit_btn.pack(side=tk.LEFT, padx=5)
-        #
-        open_btn = ttk.Button(ctrl_frame, text="Open Opt", command=partial(self.on_open, True))
+        # plot
+        open_btn = ttk.Button(ctrl_frame1, text="Open Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=5)
-        open1_btn = ttk.Button(ctrl_frame, text="Open Raw", command=partial(self.on_open, False))
+        open1_btn = ttk.Button(ctrl_frame1, text="Open Raw", command=partial(self.on_open, False))
         open1_btn.pack(side=tk.RIGHT, padx=10)
+
+        # data/image info
+        img_info_lbl = ttk.Label(ctrl_frame2, textvariable=self.img_info_var)
+        img_info_lbl.pack(side=tk.LEFT, fill=tk.X, padx=5)
+        self.img_info_lbl = img_info_lbl
+
+        # get data
+        opt_data_btn = ttk.Button(ctrl_frame2, text="Data Opt", command=partial(self.on_get_data, True))
+        opt_data_btn.pack(side=tk.RIGHT, padx=5)
+        raw_data_btn = ttk.Button(ctrl_frame2, text="Data Raw", command=partial(self.on_get_data, False))
+        raw_data_btn.pack(side=tk.RIGHT, padx=10)
+
+    def on_get_data(self, is_opt: bool):
+        """ Get the data, opt or raw
+        """
+        data_path = self.find_data_path(self.loaded_image_ftid, is_opt)
+        if data_path is None or not data_path.is_file():
+            self.img_info_var.set(f"Invalid data path for ID {self.loaded_image_ftid}.")
+            self.img_info_lbl.config(foreground=RED_COLOR_HEX)
+        else:
+            self.img_info_var.set(f"Downloading {data_path.name}")
+            self.img_info_lbl.config(foreground=self.lbl_sty_fg)
 
     def on_fit_image(self):
         """ Fit the size of image to the right panel.
@@ -295,14 +332,22 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         """ Reload the MPS faults table.
         """
         self.refresh_table_data(filter)
+        # clear the cache
+        DATA_PATH_CACHE.clear()
 
     def on_open(self, is_opt: bool):
         # find the data files
-        if self.loaded_image_ftid is None:
-            return
-
         data_path = self.find_data_path(self.loaded_image_ftid, is_opt)
-        if data_path is not None:
+        if data_path is None or not data_path.is_file():
+            _s = "opt" if is_opt else "raw"
+            msg = f"Invalid {_s} data file for ID {self.loaded_image_ftid}"
+            self.img_info_var.set(msg)
+            self.img_info_lbl.config(foreground=RED_COLOR_HEX)
+            logger.error(msg)
+            # remove from the cache
+            DATA_PATH_CACHE.pop(f"{self.loaded_image_ftid}-r", None)
+            DATA_PATH_CACHE.pop(f"{self.loaded_image_ftid}-o", None)
+        else:
             # call plot tool
             cmdline = f"dm-wave plot -opt -i {data_path}" if is_opt else \
                       f"dm-wave plot -i {data_path}"
@@ -312,17 +357,24 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                         f"Ploting with the {data_path} (opt)"
             logger.info(_info_msg)
             subprocess.Popen(cmdline, shell=True)
-        else:
-            _s = "opt" if is_opt else "raw"
-            logger.warning(
-                    f"Not found the {_s} data file for {self.loaded_image_ftid}.")
+            self.img_info_var.set(f"Plotting with {data_path.name}")
+            self.img_info_lbl.config(foreground=self.lbl_sty_fg)
 
     def find_data_path(self, ftid: int, is_opt: bool = True) -> Union[Path, None]:
+        if ftid is None:
+            return None
+        k = f"{ftid}-o" if is_opt else f"{ftid}-r"
+        if k in DATA_PATH_CACHE:
+            logger.debug(f"Found data file at {DATA_PATH_CACHE.get(k)} (cached)")
+            return DATA_PATH_CACHE.get(k)
         glob_pattern = f"*{ftid}_opt.h5" if is_opt else f"*{ftid}.h5"
         for d in self.data_dirs:
             for pth in d.rglob(glob_pattern):
                 if pth.is_file():
+                    DATA_PATH_CACHE[k] = pth
+                    logger.debug(f"Found data file at {DATA_PATH_CACHE.get(k)}")
                     return pth
+        logger.debug(f"No data file found for ID {ftid}")
         return None
 
     def find_image_path(self, ftid: int) -> Union[Path, None]:
@@ -348,7 +400,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             self.loaded_image_var.set(str(img_filepath))
             self.preview_info_var.set(f"Event on Preview: {ftid}")
             self.info_var.set(DEFAULT_INFO_STRING)
-            self.info_lbl.config(foreground="black")
+            self.info_lbl.config(foreground=self.lbl_sty_fg)
         else:
             logger.warning(f"Not found the image for {ftid}")
             self.info_var.set(f"No image found for ID {ftid}")
