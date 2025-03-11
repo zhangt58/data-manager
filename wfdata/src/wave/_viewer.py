@@ -4,6 +4,7 @@
 import pandas as pd
 import shutil
 import subprocess
+import platform
 import tkinter as tk
 from tkinter import (
     ttk,
@@ -303,13 +304,25 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         else:
             self.img_info_lbl.config(foreground=self.lbl_sty_fg)
             dst_pth, err = save_data(data_path)
+            if dst_pth is None:
+                return
             if err is None:
                 self.img_info_var.set(f"Downloaded {data_path.name}")
                 self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+                r = messagebox.showinfo(
+                      title="Download Data",
+                      message=f"Successfully Downloaded {data_path.name}",
+                      detail=f"Saved as {dst_pth}",
+                      type=messagebox.OKCANCEL)
+                if r == messagebox.OK:
+                    if platform.system() == "Windows":
+                        _cmd = f"explorer /select,{dst_pth}"
+                        subprocess.call(_cmd, shell=True)
             else:
                 messagebox.showwarning(
                     title="Download Data",
-                    message=err
+                    message=f"Error Downloading {data_path.name}",
+                    detail=err
                 )
 
     def on_fit_image(self):
@@ -492,6 +505,8 @@ def save_data(src_file_path: Path) -> tuple[Path, Union[str, None]]:
             initialdir=initial_dir,
             initialfile=src_file_path.name,
     )
+    if not dst_file_path:
+        return None, None
     try:
         shutil.copy2(src_file_path, dst_file_path)
     except Exception as e:
