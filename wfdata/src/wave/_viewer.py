@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd
+import shutil
 import subprocess
 import tkinter as tk
 from tkinter import (
@@ -300,8 +301,16 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             self.img_info_var.set(f"Invalid data path for ID {self.loaded_image_ftid}.")
             self.img_info_lbl.config(foreground=RED_COLOR_HEX)
         else:
-            self.img_info_var.set(f"Downloading {data_path.name}")
             self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+            dst_pth, err = save_data(data_path)
+            if err is None:
+                self.img_info_var.set(f"Downloaded {data_path.name}")
+                self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+            else:
+                messagebox.showwarning(
+                    title="Download Data",
+                    message=err
+                )
 
     def on_fit_image(self):
         """ Fit the size of image to the right panel.
@@ -472,6 +481,25 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.data, self.data_info = self.read_data(filter)
         self.tree.delete(*self.tree.get_children())
         self.present_main_data()
+
+
+def save_data(src_file_path: Path) -> tuple[Path, Union[str, None]]:
+    initial_dir = Path("~").expanduser().joinpath("Downloads")
+    dst_file_path = filedialog.asksaveasfilename(
+            title="Save As",
+            defaultextension=".h5",
+            filetypes=[("HDF5 Files", "*.h5"), ("All Files", "*.*")],
+            initialdir=initial_dir,
+            initialfile=src_file_path.name,
+    )
+    try:
+        shutil.copy2(src_file_path, dst_file_path)
+    except Exception as e:
+        logger.error(f"Copy failed {src_file_path} -> {dst_file_path}")
+        return dst_file_path, f"{e}"
+    else:
+        logger.debug(f"Copied {src_file_path} -> {dst_file_path}")
+        return dst_file_path, None
 
 
 def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
