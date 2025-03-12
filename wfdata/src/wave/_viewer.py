@@ -115,7 +115,7 @@ class MainWindow(tk.Tk):
         latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern))[-1]
         v = re.search(r"_(\d+\.\d+(?:\.\d+)?(?:-\d+)?)\.", str(latest_pkg_path))
         if v is not None:
-            latest_pkg_ver = f"v{v.group(1)}"
+            latest_pkg_ver = v.group(1)
             if latest_pkg_ver > _version:
                 logger.info(f"New version {latest_pkg_ver} is available!")
                 r = messagebox.askquestion(title="Checking for Updates",
