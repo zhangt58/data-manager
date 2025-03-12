@@ -1,8 +1,4 @@
-; -- Example1.iss --
-; Demonstrates copying 3 files and creating an icon.
-
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING .ISS SCRIPT FILES!
-
 
 #define MyAppName "DM-Wave"
 #define MyAppVersion "0.9.6"
