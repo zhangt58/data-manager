@@ -55,6 +55,9 @@ class MainWindow(tk.Tk):
         #  window title
         self.title("Post-mortem Data Viewer on MPS Faults")
 
+        # create menus
+        self.create_menu()
+
         # screen resolution
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
@@ -101,6 +104,49 @@ class MainWindow(tk.Tk):
         #
         self.create_table_panel()
         self.create_preview_panel()
+
+    def on_check_updates(self):
+        """ Check if new versions are available, Windows only.
+        """
+        logger.info("Checking if new versions are avaiable...")
+        pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
+        pkg_name_pattern = "DataManager-Wave*.exe"
+        latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern))[0]
+        v = re.search(r"_(\d+\.\d+(?:\.\d+)?(?:-\d+)?)\.", str(latest_pkg_path))
+        if v is not None:
+            latest_pkg_ver = v.group(1)
+            if latest_pkg_ver > _version:
+                logger.info(f"Installing the new version {latest_pkg_ver}!")
+                subprocess.call(f"{latest_pkg_path} /i", shell=True)
+        else:
+            print("Unable to detect the new version.")
+
+    def create_menu(self):
+        """ Create the menu bar and the items.
+        """
+        def on_help():
+            import webbrowser
+            webbrowser.open("https://wikihost.frib.msu.edu/AcceleratorPhysics/doku.php?id=data:linacdata")
+
+        menu_bar = tk.Menu(self)
+        # File
+        file_menu = tk.Menu(menu_bar, tearoff=0)
+        file_menu.add_command(label="Exit", accelerator="Ctrl+W", command=self.destroy)
+        # Help
+        help_menu = tk.Menu(menu_bar, tearoff=0)
+        help_menu.add_command(label="Contents", accelerator="F1", command=on_help)
+        if _IS_WIN_PLATFORM:
+            help_menu.add_command(label="Check Updates", command=self.on_check_updates)
+        help_menu.add_command(label="About", accelerator="Ctrl+A",
+                              command=lambda:self.on_about(self))
+        #
+        menu_bar.add_cascade(label="File", menu=file_menu)
+        menu_bar.add_cascade(label="Help", menu=help_menu)
+        #
+        self.config(menu=menu_bar)
+        self.bind("<Control-w>", lambda e:self.destroy())
+        self.bind("<Control-a>", lambda e:self.on_about(self))
+        self.bind("<F1>",lambda e:on_help())
 
     def read_data(self, filter: Union[str, None] = None) -> tuple[pd.DataFrame, Union[pd.DataFrame, None]]:
         """ Read a list or rows data from *csv_file*.
