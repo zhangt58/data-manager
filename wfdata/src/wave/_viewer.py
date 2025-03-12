@@ -249,7 +249,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
 
 
         # position on top of the middle of the main
-        w0, h0 = 800, 600
+        w0, h0 = 600, 400
         main_w, main_h = parent.winfo_width(), parent.winfo_height()
         main_x, main_y = parent.winfo_x(), parent.winfo_y()
         x = main_x + (main_w - w0) // 2
