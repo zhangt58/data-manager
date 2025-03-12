@@ -109,6 +109,20 @@ class MainWindow(tk.Tk):
         """ Check if new versions are available, Windows only.
         """
         import re
+        import tempfile
+
+        def _install(exefile: Path):
+            try:
+                tmp_dirpath = Path(tempfile.gettempdir())
+                tmp_exefile = tmp_dirpath.joinpath(exefile.name)
+                shutil.copy(exefile, tmp_exefile)
+                subprocess.call(f"{tmp_exefile} /i", shell=True)
+            except Exception as e:
+                logger.error("Error installing {exefile}: {e}")
+            finally:
+                if tmp_exefile.exists():
+                    tmp_exefile.unlink()
+
         logger.info("Checking if new versions are avaiable...")
         pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
         pkg_name_pattern = "DataManager-Wave*.exe"
@@ -123,7 +137,7 @@ class MainWindow(tk.Tk):
                         detail=f"Press YES to upgrade from {_version}."
                     )
                 if r == messagebox.YES:
-                    subprocess.call(f"{latest_pkg_path} /i", shell=True)
+                    _install(latest_pkg_path)
                 return
         messagebox.showinfo(title="Checking for Updates",
             message="No Updates Available.",
