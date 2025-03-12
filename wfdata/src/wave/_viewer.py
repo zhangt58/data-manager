@@ -108,18 +108,26 @@ class MainWindow(tk.Tk):
     def on_check_updates(self):
         """ Check if new versions are available, Windows only.
         """
+        import re
         logger.info("Checking if new versions are avaiable...")
         pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
         pkg_name_pattern = "DataManager-Wave*.exe"
-        latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern))[0]
+        latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern))[-1]
         v = re.search(r"_(\d+\.\d+(?:\.\d+)?(?:-\d+)?)\.", str(latest_pkg_path))
         if v is not None:
-            latest_pkg_ver = v.group(1)
+            latest_pkg_ver = f"v{v.group(1)}"
             if latest_pkg_ver > _version:
-                logger.info(f"Installing the new version {latest_pkg_ver}!")
-                subprocess.call(f"{latest_pkg_path} /i", shell=True)
-        else:
-            print("Unable to detect the new version.")
+                logger.info(f"New version {latest_pkg_ver} is available!")
+                r = messagebox.askquestion(title="Checking for Updates",
+                        message=f"Version {latest_pkg_ver} is available!",
+                        detail="Press YES to install."
+                    )
+                if r == messagebox.YES:
+                    subprocess.call(f"{latest_pkg_path} /i", shell=True)
+                return
+        messagebox.showinfo(title="Checking for Updates",
+            message="No Updates Available.",
+        )
 
     def create_menu(self):
         """ Create the menu bar and the items.
@@ -131,12 +139,12 @@ class MainWindow(tk.Tk):
         menu_bar = tk.Menu(self)
         # File
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Exit", accelerator="Ctrl+W", command=self.destroy)
+        file_menu.add_command(label="Exit", accelerator="Ctrl+Q", command=self.destroy)
         # Help
         help_menu = tk.Menu(menu_bar, tearoff=0)
-        help_menu.add_command(label="Contents", accelerator="F1", command=on_help)
+        help_menu.add_command(label="Documentation", accelerator="F1", command=on_help)
         if _IS_WIN_PLATFORM:
-            help_menu.add_command(label="Check Updates", command=self.on_check_updates)
+            help_menu.add_command(label="Check for Updates", command=self.on_check_updates)
         help_menu.add_command(label="About", accelerator="Ctrl+A",
                               command=lambda:self.on_about(self))
         #
@@ -144,7 +152,7 @@ class MainWindow(tk.Tk):
         menu_bar.add_cascade(label="Help", menu=help_menu)
         #
         self.config(menu=menu_bar)
-        self.bind("<Control-w>", lambda e:self.destroy())
+        self.bind("<Control-q>", lambda e:self.destroy())
         self.bind("<Control-a>", lambda e:self.on_about(self))
         self.bind("<F1>",lambda e:on_help())
 
