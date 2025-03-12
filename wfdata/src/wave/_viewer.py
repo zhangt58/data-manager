@@ -272,13 +272,9 @@ class MainWindow(tk.Tk):
         preview_info_lbl.pack(side=tk.RIGHT, padx=10)
         self.preview_info_lbl = preview_info_lbl
 
-        # info button
-        info_btn = ttk.Button(ctrl_frame2, text=u"\N{INFORMATION SOURCE}",
-                              width=1, command=lambda:self.on_about(self))
-        info_btn.pack(side=tk.LEFT, padx=2)
         # info label
         info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
-        info_lbl.pack(side=tk.LEFT, fill=tk.X, padx=5)
+        info_lbl.pack(side=tk.LEFT, fill=tk.X, padx=2)
         self.info_lbl = info_lbl
 
     def on_about(self, parent):
