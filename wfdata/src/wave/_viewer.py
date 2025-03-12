@@ -143,10 +143,22 @@ class MainWindow(tk.Tk):
             if r == messagebox.YES:
                 self.destroy()
 
+        def on_apply_theme(theme_name: str):
+            logger.debug(f"Applying theme: {theme_name}")
+            configure_styles(self, theme_name=theme_name)
+
+        #
         menu_bar = tk.Menu(self)
         # File
         file_menu = tk.Menu(menu_bar, tearoff=0)
         file_menu.add_command(label="Exit", accelerator="Ctrl+Q", command=on_exit)
+        # View
+        view_menu = tk.Menu(menu_bar, tearoff=0)
+        theme_subm = tk.Menu(view_menu, tearoff=0)
+        view_menu.add_cascade(label="Theme", menu=theme_subm)
+        # View -> Theme
+        for _theme in ("adapta", "arc", "breeze", "scidblue", "vista"):
+            theme_subm.add_command(label=_theme, command=partial(on_apply_theme, _theme))
         # Help
         help_menu = tk.Menu(menu_bar, tearoff=0)
         help_menu.add_command(label="Documentation", accelerator="F1", command=on_help)
@@ -156,6 +168,7 @@ class MainWindow(tk.Tk):
                               command=lambda:self.on_about(self))
         #
         menu_bar.add_cascade(label="File", menu=file_menu)
+        menu_bar.add_cascade(label="View", menu=view_menu)
         menu_bar.add_cascade(label="Help", menu=help_menu)
         #
         self.config(menu=menu_bar)
