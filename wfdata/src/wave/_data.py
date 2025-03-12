@@ -25,7 +25,7 @@ def _process_format_v0(store):
                 continue
             bcm_dfs.append(store[k])
     except Exception as e:
-        logger.warning(f"Error processing BCM {store.filename}: {e}")
+        logger.error(f"Error processing BCM {store.filename}: {e}")
         return None, None
     try:
         # BPM
@@ -40,7 +40,7 @@ def _process_format_v0(store):
         bpm_names = bpm_cols.index.str.replace(r"(BPM_D[0-9]{4}).*", r"\1", regex=True).unique().to_list()
         #
     except Exception as e:
-        logger.warning(f"Error processing BPM {store.filename}: {e}")
+        logger.error(f"Error processing BPM {store.filename}: {e}")
         return None, None
     #
     return bcm_dfs + bpm_dfs, bpm_names
@@ -64,7 +64,7 @@ def _process_format_v1(store):
             _t_idx = pd.date_range(start=df_t0[bcm_grp], periods=_bcm_df.shape[0], freq='us')
             bcm_dfs.append(_bcm_df.set_index(_t_idx))
     except Exception as e:
-        logger.warning(f"Error processing BCM {store.filename}: {e}")
+        logger.error(f"Error processing BCM {store.filename}: {e}")
         return None, None
 
     # BPM
@@ -77,7 +77,7 @@ def _process_format_v1(store):
             _t_idx = pd.date_range(start=df_t0[bpm_grp], periods=_bpm_df.shape[0], freq='us')
             bpm_dfs.append(_bpm_df.set_index(_t_idx))
     except Exception as e:
-        logger.warning(f"Error processing BPM {store.filename}: {e}")
+        logger.error(f"Error processing BPM {store.filename}: {e}")
         return None, None
     #
     bpm_names = [f"BPM_{i}" for i in bpm_grps]
@@ -96,14 +96,14 @@ def read_data(filepath: Union[str, Path],
             dfs, bpm_names = _process_format_v0(store)
         #
     if dfs is None:
-        logger.warning("Error reading data.")
+        logger.error("Error reading data.")
         return None, ""
 
     df_all = pd.concat(dfs, axis=1).sort_index(axis=1)
 
     npermit_names = ('BCM4_NPERMIT', 'BCM5_NPERMIT', 'BCM5_NPERMIT')
     if all(i not in df_all for i in npermit_names):
-        logger.warning("No NPERMIT signals, cannot figure out T trip.")
+        logger.error("No NPERMIT signals, cannot figure out T trip.")
         return None, ""
 
     # find the first index loc (int) that npermit goes high (1)
@@ -124,7 +124,7 @@ def read_data(filepath: Union[str, Path],
             if c in df_all.columns and c != npermit_col:
                 df_all.pop(c)
     else:
-        logger.warning("No high bit signals in NPERMITs, cannot figure out T trip.")
+        logger.error("No high bit signals in NPERMITs, cannot figure out T trip.")
         return None, ""
 
     t0_val: pd.Timestamp = df_all.index[t0_idx]

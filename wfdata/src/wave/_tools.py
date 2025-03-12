@@ -67,7 +67,7 @@ def merge_tool(call_as_subtool: bool = False, prog: str = None):
 
     if args.csv_report is not None:
         if Path(args.csv_report).is_file():
-            logger.warning(f"Exported table of events info to {args.csv_report} (overwritten)")
+            logger.debug(f"Exported table of events info to {args.csv_report} (overwritten)")
         else:
             logger.info(f"Exported table of events info to {args.csv_report}")
         df_evts.to_csv(args.csv_report)

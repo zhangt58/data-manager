@@ -47,7 +47,7 @@ def read_path(dir_path: Path, file_type: str = "h5",
             r = _PATTERN_NO_FTID.match(pth.name)
             ftid = fault_id
         if r is None:
-            logger.warning(f"Skip {pth}: missing MPS fault ID")
+            logger.debug(f"Skip {pth}: missing MPS fault ID")
             continue
         if not allow_no_fault_id:
             grp_name, ts1, ts2, ftid = r.groups()
@@ -85,7 +85,7 @@ def group_datafiles(ftid: int, df_grp: pd.DataFrame,
 
     if out_filepath.is_file():
         if overwrite:
-            logger.info(f"Overwriting {out_filepath}...")
+            logger.warning(f"Overwriting {out_filepath}...")
         else:
             logger.debug(f"Skip existing {out_filepath}, force with --overwrite")
             return None
