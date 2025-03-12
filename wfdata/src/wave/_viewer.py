@@ -136,10 +136,17 @@ class MainWindow(tk.Tk):
             import webbrowser
             webbrowser.open("https://wikihost.frib.msu.edu/AcceleratorPhysics/doku.php?id=data:linacdata")
 
+        def on_exit():
+            r = messagebox.askquestion(title="Exit DM-Wave",
+                    message=f"Are you sure to close DM-Wave?",
+                )
+            if r == messagebox.YES:
+                self.destroy()
+
         menu_bar = tk.Menu(self)
         # File
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Exit", accelerator="Ctrl+Q", command=self.destroy)
+        file_menu.add_command(label="Exit", accelerator="Ctrl+Q", command=on_exit)
         # Help
         help_menu = tk.Menu(menu_bar, tearoff=0)
         help_menu.add_command(label="Documentation", accelerator="F1", command=on_help)
@@ -152,7 +159,7 @@ class MainWindow(tk.Tk):
         menu_bar.add_cascade(label="Help", menu=help_menu)
         #
         self.config(menu=menu_bar)
-        self.bind("<Control-q>", lambda e:self.destroy())
+        self.bind("<Control-q>", lambda e:on_exit())
         self.bind("<Control-a>", lambda e:self.on_about(self))
         self.bind("<F1>",lambda e:on_help())
 
