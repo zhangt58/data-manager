@@ -119,8 +119,8 @@ class MainWindow(tk.Tk):
             if latest_pkg_ver > _version:
                 logger.info(f"New version {latest_pkg_ver} is available!")
                 r = messagebox.askquestion(title="Checking for Updates",
-                        message=f"Version {latest_pkg_ver} is available!",
-                        detail="Press YES to install."
+                        message=f"DataManager-Wave {latest_pkg_ver} is available!",
+                        detail=f"Press YES to upgrade from {_version}."
                     )
                 if r == messagebox.YES:
                     subprocess.call(f"{latest_pkg_path} /i", shell=True)
