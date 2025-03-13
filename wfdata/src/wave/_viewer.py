@@ -55,6 +55,9 @@ class MainWindow(tk.Tk):
         #  window title
         self.title("Post-mortem Data Viewer on MPS Faults")
 
+        # start up callbacks
+        self.after(1000, self.on_start_up)
+
         # create menus
         self.create_menu()
 
@@ -105,8 +108,14 @@ class MainWindow(tk.Tk):
         self.create_table_panel()
         self.create_preview_panel()
 
-    def on_check_updates(self):
+    def on_start_up(self):
+        """ Execute after started up.
+        """
+        self.on_check_updates(silent=True)
+
+    def on_check_updates(self, silent: bool = False):
         """ Check if new versions are available, Windows only.
+        if silent is set, do not pop up information messagebox if no updates available.
         """
         import re
         import tempfile
@@ -139,9 +148,10 @@ class MainWindow(tk.Tk):
                 if r == messagebox.YES:
                     _install(latest_pkg_path)
                 return
-        messagebox.showinfo(title="Checking for Updates",
-            message="No Updates Available.",
-        )
+        if not silent:
+            messagebox.showinfo(title="Checking for Updates",
+                message="No Updates Available.",
+            )
 
     def create_menu(self):
         """ Create the menu bar and the items.
@@ -177,7 +187,8 @@ class MainWindow(tk.Tk):
         help_menu = tk.Menu(menu_bar, tearoff=0)
         help_menu.add_command(label="Documentation", accelerator="F1", command=on_help)
         if _IS_WIN_PLATFORM:
-            help_menu.add_command(label="Check for Updates", command=self.on_check_updates)
+            help_menu.add_command(label="Check for Updates",
+                                  command=partial(self.on_check_updates, False))
         help_menu.add_command(label="About", accelerator="Ctrl+A",
                               command=lambda:self.on_about(self))
         #
