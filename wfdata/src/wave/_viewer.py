@@ -171,7 +171,7 @@ class MainWindow(tk.Tk):
         theme_subm = tk.Menu(view_menu, tearoff=0)
         view_menu.add_cascade(label="Theme", menu=theme_subm)
         # View -> Theme
-        for _theme in ("adapta", "arc", "breeze", "scidblue", "vista"):
+        for _theme in ("adapta", "arc", "breeze", "vista"):
             theme_subm.add_command(label=_theme, command=partial(on_apply_theme, _theme))
         # Help
         help_menu = tk.Menu(menu_bar, tearoff=0)
