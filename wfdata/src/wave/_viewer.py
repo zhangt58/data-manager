@@ -13,12 +13,13 @@ from tkinter import (
     messagebox,
     scrolledtext,
 )
+import io
 from pathlib import Path
 from functools import partial
 from typing import Union
 from PIL import Image, ImageTk
-from ._data import read_data as read_datafile
 
+from ._data import read_data as read_datafile
 from ._tk import configure_styles
 from ._log import logger
 from ._ver import _version
@@ -361,8 +362,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
     def create_preview_panel(self):
         # right panel
         # |- image label
-        # |- [fit]   [Plot Raw]  [Plot Opt]
-        # |-         [Get Raw ]  [Get Opt ]
+        # |- [fit][Copy]   [Plot Raw][Plot Opt]
+        # |-               [Get Raw ][Get Opt ]
 
         self.right_panel.rowconfigure(0, weight=1)
         self.right_panel.rowconfigure(1, weight=0)
@@ -398,6 +399,9 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         fit_btn = ttk.Button(ctrl_frame1, text="Fit", command=self.on_fit_image,
                              width=4)
         fit_btn.pack(side=tk.LEFT, padx=5)
+        save_img_btn = ttk.Button(ctrl_frame1, text="Save", command=self.on_save_image,
+                                  width=5)
+        save_img_btn.pack(side=tk.LEFT, padx=5)
         # plot
         open_btn = ttk.Button(ctrl_frame1, text="Plot Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=5)
@@ -446,6 +450,59 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                     message=f"Error Downloading {data_path.name}",
                     detail=err
                 )
+
+    def save_image(self, img_filepath: Path):
+        initial_dir = Path("~").expanduser().joinpath("Downloads")
+        src_filename = img_filepath.name
+        _file_types = [
+            ("PNG Files", "*.png"),
+        ]
+        dst_file_path = filedialog.asksaveasfilename(
+                title="Save As",
+                filetypes=_file_types,
+                initialdir=initial_dir,
+                defaultextension=".png",
+                initialfile=src_filename,
+        )
+        if not dst_file_path:
+            return None, None
+        try:
+            shutil.copy2(img_filepath, dst_file_path)
+        except Exception as e:
+            logger.error(f"Failed save {img_filepath} -> {dst_file_path}: {e}")
+            return dst_file_path, f"{e}"
+        else:
+            logger.debug(f"Saved {img_filepath} -> {dst_file_path}")
+            return dst_file_path, None
+
+    def on_save_image(self):
+        """ Save image.
+        """
+        if self.loaded_img_filepath is None:
+            return
+        img_filepath = Path(self.loaded_img_filepath)
+        dst_pth, err = self.save_image(img_filepath)
+        if dst_pth is None:
+            return
+        if err is None:
+            self.img_info_var.set(f"Downloaded {img_filepath.name}")
+            self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+            r = messagebox.showinfo(
+                  title="Download Image",
+                  message=f"Successfully Downloaded {img_filepath.name}",
+                  detail=f"Saved as {dst_pth}",
+                  type=messagebox.OKCANCEL)
+            if r == messagebox.OK:
+                if _IS_WIN_PLATFORM:
+                    _cmd = f"explorer /select,{dst_pth}"
+                    logger.info(f"Revealing {dst_pth} in File Explorer")
+                    subprocess.Popen(_cmd, shell=True)
+        else:
+            messagebox.showwarning(
+                title="Download Image",
+                message=f"Error Downloading {img_filepath.name}",
+                detail=err
+            )
 
     def on_fit_image(self):
         """ Fit the size of image to the right panel.
@@ -697,4 +754,3 @@ def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: 
     app.minsize(width=int(w), height=int(h))
     logger.info(f"Set the initial size {geometry}")
     app.mainloop()
-
