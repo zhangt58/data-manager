@@ -17,6 +17,7 @@ from pathlib import Path
 from functools import partial
 from typing import Union
 from PIL import Image, ImageTk
+from ._data import read_data as read_datafile
 
 from ._tk import configure_styles
 from ._log import logger
@@ -111,7 +112,8 @@ class MainWindow(tk.Tk):
     def on_start_up(self):
         """ Execute after started up.
         """
-        self.on_check_updates(silent=True)
+        if _IS_WIN_PLATFORM:
+            self.on_check_updates(silent=True)
 
     def on_check_updates(self, silent: bool = False):
         """ Check if new versions are available, Windows only.
@@ -422,7 +424,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             self.img_info_lbl.config(foreground=RED_COLOR_HEX)
         else:
             self.img_info_lbl.config(foreground=self.lbl_sty_fg)
-            dst_pth, err = save_data(data_path)
+            dst_pth, err = save_data(data_path, is_opt)
             if dst_pth is None:
                 return
             if err is None:
@@ -617,25 +619,71 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.present_main_data()
 
 
-def save_data(src_file_path: Path) -> tuple[Union[Path, None], Union[str, None]]:
+def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Union[str, None]]:
     initial_dir = Path("~").expanduser().joinpath("Downloads")
+    src_filename = src_file_path.name
+    src_fn_noext = src_filename.rsplit(".", 1)[0]
+    if is_opt:
+        _file_types = [
+            ("HDF5 Files", "*.h5"),
+            ("CSV Files", "*.csv"),
+            ("XLSX Files", "*.xlsx"),
+        ]
+    else:
+        _file_types = [
+            ("HDF5 Files", "*.h5"),
+        ]
     dst_file_path = filedialog.asksaveasfilename(
             title="Save As",
-            defaultextension=".h5",
-            filetypes=[("HDF5 Files", "*.h5"), ("All Files", "*.*")],
+            filetypes=_file_types,
             initialdir=initial_dir,
-            initialfile=src_file_path.name,
+            initialfile=src_fn_noext,
     )
     if not dst_file_path:
         return None, None
     dst_file_path = Path(dst_file_path)
+    dst_file_ext = dst_file_path.suffix
+    if dst_file_ext == '':
+        return None, None
     try:
-        shutil.copy2(src_file_path, dst_file_path)
+        if is_opt:
+            if dst_file_ext == ".h5":
+                with pd.HDFStore(src_file_path, mode="r") as src_store:
+                    keys = src_store.keys()
+                    t_start = src_store.get_storer('TimeWindow').attrs.t_start
+                    t_zero = src_store.get_storer('TimeWindow').attrs.t_zero
+                    with pd.HDFStore(dst_file_path, mode="w",
+                                     complib="zlib", complevel=9) as dst_store:
+                        for k in keys:
+                            dst_store.put(k, src_store[k])
+                        dst_store.get_storer('TimeWindow').attrs.t_start = t_start
+                        dst_store.get_storer('TimeWindow').attrs.t_zero = t_zero
+            else:
+                df, _ = read_datafile(src_file_path, t_range=None, is_opt=is_opt)
+                if dst_file_ext == ".csv":
+                    df.to_csv(dst_file_path)
+                elif dst_file_ext == ".xlsx":
+                    df[["time_sec", "time_usec"]] = \
+                        df.index.map(lambda i: (int(i.timestamp() * 1e6 // 1e6),
+                                            int(i.timestamp() * 1e6 % 1e6))).to_list()
+                    df.to_excel(dst_file_path, index=False)
+        else:
+            # raw
+            if dst_file_ext == ".h5":
+                with pd.HDFStore(src_file_path, mode="r") as src_store:
+                    keys = src_store.keys()
+                    with pd.HDFStore(dst_file_path, mode="w",
+                                     complib="zlib", complevel=9) as dst_store:
+                        for k in keys:
+                            dst_store.put(k, src_store[k])
+            else:
+                raise RuntimeError(
+                        f"No support exporting raw .h5 file as {dst_file_ext} type.")
     except Exception as e:
-        logger.error(f"Copy failed {src_file_path} -> {dst_file_path}")
+        logger.error(f"Failed downloading {src_file_path} -> {dst_file_path}: {e}")
         return dst_file_path, f"{e}"
     else:
-        logger.debug(f"Copied {src_file_path} -> {dst_file_path}")
+        logger.debug(f"Saved {src_file_path} -> {dst_file_path}")
         return dst_file_path, None
 
 
