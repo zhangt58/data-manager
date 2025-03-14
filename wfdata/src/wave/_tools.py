@@ -423,7 +423,7 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     if not img_outpaths:
         return
 
-    df, t0_s = _read_data(data_filepath, is_opt, t_range)
+    df, t0_s = read_data(data_filepath, t_range, is_opt)
     if df is None:
         logger.warning(f"Skip processing {data_filepath}")
         return
@@ -445,25 +445,11 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     plt.close(fig)
 
 
-def _read_data(data_filepath: Path, is_opt: bool = False,
-               t_range: Union[None, tuple[int, int]] = None):
-    if is_opt:
-        # read the converted file, smaller size.
-        store = pd.HDFStore(data_filepath)
-        t0_s = store.get_storer('TimeWindow').attrs.t_zero
-        df = pd.concat([store[k] for k in store.keys()], axis=1)
-        store.close()
-    else:
-        # read the merged (v0) or v1 raw file.
-        df, t0_s = read_data(data_filepath, t_range)
-    return df, t0_s
-
-
 def create_plot(data_filepath: Path, is_opt: bool = False,
                 t_range: Union[None, tuple[int, int]] = None):
     """ Create the matplotlib figure object.
     """
-    df, t0_s = _read_data(data_filepath, is_opt, t_range)
+    df, t0_s = read_data(data_filepath, t_range, is_opt)
     return plot(df, t0_s, data_filepath.name)
 
 

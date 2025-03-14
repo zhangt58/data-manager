@@ -86,9 +86,23 @@ def _process_format_v1(store):
 
 
 def read_data(filepath: Union[str, Path],
-              t_range: Union[tuple[int, int], None] = (-800, 400)):
-    """ Read and consolidate dataset.
+              t_range: Union[tuple[int, int], None] = (-800, 400),
+              is_opt: bool = False):
+    """ Read and consolidate dataset, if is_opt is set, deal with optimized dataset,
+    otherwise, read from raw.
     """
+    if is_opt:
+        # read the converted file, smaller size.
+        with pd.HDFStore(filepath, mode="r") as store:
+            t0_s = store.get_storer('TimeWindow').attrs.t_zero
+            df_all = pd.concat([store[k] for k in store.keys()], axis=1)
+        #
+        t0_idx: int = (df_all["t_us"]==0.0).argmax()
+        if t_range is not None:
+            return df_all.iloc[t0_idx + t_range[0]:t0_idx + t_range[1], :], t0_s
+        return df_all, t0_s
+
+    # read with raw
     with pd.HDFStore(filepath, mode="r") as store:
         if '/grp' in store.keys():
             dfs, bpm_names = _process_format_v1(store)
