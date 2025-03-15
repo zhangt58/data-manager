@@ -229,7 +229,8 @@ class MainWindow(tk.Tk):
         # filter info
         if filter == "150us":
             if df_info is None:
-                self.info_var.set("MTCA trip info is not available!")
+                self.set_var(self.info_var, "MTCA trip info is not available!",
+                             DEFAULT_INFO_STRING, self.info_lbl, RED_COLOR_HEX, self.lbl_sty_fg)
             else:
                 _df = df_info.set_index('Fault_ID')
                 idx = _df[_df["T Window"].astype(str).str.contains(
@@ -239,6 +240,20 @@ class MainWindow(tk.Tk):
                 df = df1.loc[idx1].reset_index()
                 self.info_var.set(DEFAULT_INFO_STRING)
         return df, df_info
+
+    def set_var(self, var_obj: tk.StringVar, new_val: str,
+                default_val: str, linked_obj: ttk.Label,
+                new_fg: str, default_fg: str, ms_stay: float = 1000):
+        """ Set *var_obj* with *new_val* for *ms_stay* milliseconds,
+        then reset to *default_val*. The foreground color of the linked label
+        object could be set with *linked_obj* and *new_fg* and *default_fg*.
+        """
+        var_obj.set(new_val)
+        linked_obj.config(foreground=new_fg)
+        def _reset():
+            var_obj.set(default_val)
+            linked_obj.config(foreground=default_fg)
+        self.after(ms_stay, _reset)
 
     def create_table_panel(self):
         """ Create the table for MPS faults data
@@ -424,16 +439,15 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         """
         data_path = self.find_data_path(self.loaded_image_ftid, is_opt)
         if data_path is None or not data_path.is_file():
-            self.img_info_var.set(f"Invalid data path for ID {self.loaded_image_ftid}.")
-            self.img_info_lbl.config(foreground=RED_COLOR_HEX)
+            self.set_var(self.img_info_var, f"Invalid data path for ID {self.loaded_image_ftid}.",
+                         "", self.img_info_lbl, RED_COLOR_HEX, self.lbl_sty_fg)
         else:
-            self.img_info_lbl.config(foreground=self.lbl_sty_fg)
             dst_pth, err = save_data(data_path, is_opt)
             if dst_pth is None:
                 return
             if err is None:
-                self.img_info_var.set(f"Downloaded {data_path.name}")
-                self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+                self.set_var(self.img_info_var, f"Downloaded {data_path.name}", "",
+                             self.img_info_lbl, self.lbl_sty_fg, self.lbl_sty_fg)
                 r = messagebox.showinfo(
                       title="Download Data",
                       message=f"Successfully Downloaded {data_path.name}",
@@ -485,8 +499,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         if dst_pth is None:
             return
         if err is None:
-            self.img_info_var.set(f"Downloaded {img_filepath.name}")
-            self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+            self.set_var(self.img_info_var, f"Downloaded {img_filepath.name}",
+                         "", self.img_info_lbl, self.lbl_sty_fg, self.lbl_sty_fg)
             r = messagebox.showinfo(
                   title="Download Image",
                   message=f"Successfully Downloaded {img_filepath.name}",
@@ -542,8 +556,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         if data_path is None or not data_path.is_file():
             _s = "opt" if is_opt else "raw"
             msg = f"Invalid {_s} data file for ID {self.loaded_image_ftid}"
-            self.img_info_var.set(msg)
-            self.img_info_lbl.config(foreground=RED_COLOR_HEX)
+            self.set_var(self.img_info_var, msg, "", self.img_info_lbl,
+                         RED_COLOR_HEX, self.lbl_sty_fg)
             logger.error(msg)
             # remove from the cache
             DATA_PATH_CACHE.pop(f"{self.loaded_image_ftid}-r", None)
@@ -558,8 +572,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                         f"Ploting with the {data_path} (opt)"
             logger.info(_info_msg)
             subprocess.Popen(cmdline, shell=True)
-            self.img_info_var.set(f"Plotting with {data_path.name}")
-            self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+            self.set_var(self.img_info_var, f"Plotting with {data_path.name}", "",
+                         self.img_info_lbl, self.lbl_sty_fg, self.lbl_sty_fg)
 
     def find_data_path(self, ftid: int, is_opt: bool = True) -> Union[Path, None]:
         if ftid is None:
@@ -605,8 +619,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         else:
             msg = f"No image found for ID {ftid}"
             logger.warning(msg)
-            self.info_var.set(msg)
-            self.info_lbl.config(foreground=RED_COLOR_HEX)
+            self.set_var(self.info_var, msg, DEFAULT_INFO_STRING, self.info_lbl,
+                         RED_COLOR_HEX, self.lbl_sty_fg)
 
     def place_table(self, parent_frame, headers: list[str],
                     xscroll_on: bool = True, yscroll_on: bool = True,
