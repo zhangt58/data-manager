@@ -25,22 +25,22 @@ class FigureWindow(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self.quit)
 
         # Create a frame for the figures
-        frame = ttk.Frame(self)
-        frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill=tk.BOTH, expand=True)
 
         nrows, ncols = grid
         for i in range(nrows):
-            frame.rowconfigure(i, weight=1)
+            main_frame.rowconfigure(i, weight=1)
         for j in range(ncols):
-            frame.columnconfigure(j, weight=1)
+            main_frame.columnconfigure(j, weight=1)
 
         # layout figures
         for i, (fig, fig_title) in enumerate(figures):
             irow, icol = i // ncols, i % ncols
-            self.place_figure(frame, fig, fig_title, irow, icol, padx, pady,
+            self.place_figure(main_frame, fig, fig_title, irow, icol, padx, pady,
                               fig_dpi=kws.get('fig_dpi', None))
 
-        # bottom area
+        # bottom area (notes and Quit button)
         bottom_frame = ttk.Frame(self)
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
@@ -55,9 +55,14 @@ class FigureWindow(tk.Toplevel):
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
                      padx: int = 5, pady: int = 5, fig_dpi: int = None):
-        frame = ttk.LabelFrame(parent, text=title)
+        frame = ttk.LabelFrame(parent, text=title, borderwidth=1, relief=tk.GROOVE)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")
 
+        # toolbar
+        tb_frame = ttk.Frame(frame)
+        tb_frame.pack(fill=tk.X, padx=2, pady=2, expand=True)
+
+        # figure
         fig_frame = ttk.Frame(frame)
         fig_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -67,11 +72,9 @@ class FigureWindow(tk.Toplevel):
         #
         canvas = FigureCanvasTkAgg(figure, master=fig_frame)
         canvas.draw_idle()
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
-        tb_frame = ttk.Frame(frame)
-        tb_frame.pack(fill=tk.X)
-        tb = NavigationToolbar2Tk(canvas,tb_frame)
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+        #
+        tb = NavigationToolbar2Tk(canvas, tb_frame)
         tb.update()
 
 
