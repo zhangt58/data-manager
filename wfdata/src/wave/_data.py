@@ -4,6 +4,7 @@
 import cmath
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from functools import partial
@@ -11,6 +12,10 @@ from pathlib import Path
 from typing import Union
 
 from ._log import logger
+
+DEFAULT_MPL_FONT_SIZE = mpl.rcParams['font.size']
+DEFAULT_MPL_FONT_FAMILY = mpl.rcParams['font.family']
+DEFAULT_MPL_FIG_DPI = mpl.rcParams['figure.dpi']
 
 
 def _process_format_v0(store):
@@ -184,12 +189,18 @@ def _plot_no_data(ax, reason: str = "NO DATA"):
                 color="gray", fontsize=28, ha='center', va='center')
 
 
-def plot(df: pd.DataFrame, t0: str, title: str):
+def plot(df: pd.DataFrame, t0: str, title: str, **kws):
+    """ Keyword Arguments:
+    fig_dpi: int, figsize: tuple
+    """
 
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(14, 9), dpi=110)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1,
+                                        figsize=kws.get('figsize', (12.4, 8)),
+                                        dpi=kws.get('fig_dpi', DEFAULT_MPL_FIG_DPI))
 
-    xylabel_fontdict = {"size": 14, "family": "sans-serif"}
-    xyticks_fontdict = {"size": 13, "family": "sans-serif"}
+    xylabel_fontdict = {"size": DEFAULT_MPL_FONT_SIZE + 2, "family": DEFAULT_MPL_FONT_FAMILY}
+    xyticks_fontdict = {"size": DEFAULT_MPL_FONT_SIZE + 1, "family": DEFAULT_MPL_FONT_FAMILY}
+    title_fontdict = {"size": DEFAULT_MPL_FONT_SIZE + 4, "family": DEFAULT_MPL_FONT_FAMILY}
     grid_color = "#7F8C8D"
 
     # BCM
@@ -204,13 +215,13 @@ def plot(df: pd.DataFrame, t0: str, title: str):
         _plot_no_data(ax1)
 
     ax1.set_ylabel("Current $[\mu A]$")
-    ax1.set_title(title, fontsize=16, fontfamily="sans-serif")
+    ax1.set_title(title, fontsize=title_fontdict['size'],
+                  fontfamily=title_fontdict['family'])
 
     ax1r = ax1.twinx()
     npermit_col = [c for c in df.columns if c.endswith('NPERMIT')][0]
     df.plot(x='t_us', y=npermit_col, c='#2C3E50', ls='-.', lw=1, ax=ax1r,
-            label=npermit_col,
-            fontsize=14, ylim=(-0.2, 1.2))
+            label=npermit_col, ylim=(-0.2, 1.2))
     ax1r.set_ylabel("NPERMIT")
     ax1r.legend(loc="lower left")
 
@@ -235,7 +246,7 @@ def plot(df: pd.DataFrame, t0: str, title: str):
     ax3.set_xlabel("Time $[\mu s]$")
     ax3.set_ylabel("$\Phi [^o]$ @ 80.5 MHz")
     ax3.annotate(f"$T_0$ = {t0}", (0, -0.3), xycoords='axes fraction',
-                 fontfamily="monospace", fontsize=12)
+                 fontfamily="monospace", fontsize=xylabel_fontdict['size'])
 
     for iax in (ax1, ax2, ax3):
         iax.minorticks_on()
@@ -250,7 +261,6 @@ def plot(df: pd.DataFrame, t0: str, title: str):
             lbl_o = getattr(iax, f'{u}axis').label
             lbl_o.set_fontsize(xylabel_fontdict['size'])
             lbl_o.set_fontfamily(xylabel_fontdict['family'])
-    #plt.show()
     return fig
 
 
