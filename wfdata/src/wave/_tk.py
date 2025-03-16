@@ -42,16 +42,16 @@ class FigureWindow(tk.Toplevel):
 
         # bottom area
         bottom_frame = ttk.Frame(self)
-        bottom_frame.pack(side="bottom", fill=tk.X)
+        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
         # notes area
         notes_text = tk.Text(bottom_frame, height=3)
         notes_text.insert("1.0", notes)
         notes_text.config(state="disabled")
-        notes_text.pack(side="left", fill=tk.X, pady=pady, expand=True)
+        notes_text.pack(side=tk.LEFT, fill=tk.X, padx=padx, pady=pady, expand=True)
         # quit button
         quit_btn = ttk.Button(bottom_frame, text="Quit", command=self.quit)
-        quit_btn.pack(side="right", fill=tk.X, pady=pady, padx=padx)
+        quit_btn.pack(side=tk.RIGHT, fill=tk.X, pady=pady, padx=padx)
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
                      padx: int = 5, pady: int = 5, fig_dpi: int = None):
