@@ -92,12 +92,18 @@ def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
     finally:
         # adjust the row height of Treeview
         _font = tk.font.nametofont("TkTextFont")
+        _monofont = tk.font.nametofont("TkFixedFont")
+        _monofontfamily = _monofont.actual()['family']
+        _monofontsize = _monofont.actual()['size']
         # font_family = _font.actual()['family']
         # font_size = _font.actual()['size']
         line_height = _font.metrics()['linespace']
         # Treeview
         root.style.configure("Treeview", rowheight=line_height)
         logger.debug(f"Configure styles: adjust row height of treeview.")
+        root.style.configure("Treeview", font=(_monofontfamily, _monofontsize))
+        logger.debug(f"Configure styles: set treeview font to {_monofontfamily}, {_monofontsize}")
+
 
 
 if __name__ == "__main__":
