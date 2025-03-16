@@ -33,6 +33,10 @@ RED_COLOR_HEX = "#E74C3C"
 DATA_PATH_CACHE = {}
 # is running on Windows?
 _IS_WIN_PLATFORM = platform.system() == "Windows"
+# themes
+THEMES = ("adapta", "arc", "breeze", "vista", "default") if _IS_WIN_PLATFORM else \
+         ("adapta", "arc", "breeze", "default")
+
 
 
 class MainWindow(tk.Tk):
@@ -184,7 +188,7 @@ class MainWindow(tk.Tk):
         theme_subm = tk.Menu(view_menu, tearoff=0)
         view_menu.add_cascade(label="Theme", menu=theme_subm)
         # View -> Theme
-        for _theme in ("adapta", "arc", "breeze", "vista"):
+        for _theme in THEMES:
             theme_subm.add_command(label=_theme, command=partial(on_apply_theme, _theme))
         # Help
         help_menu = tk.Menu(menu_bar, tearoff=0)
@@ -314,18 +318,18 @@ class MainWindow(tk.Tk):
         # description = MTCA06
         reload_mtca_btn = ttk.Button(ctrl_frame1, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
-        reload_mtca_btn.pack(side=tk.LEFT, padx=10)
+        reload_mtca_btn.pack(side=tk.LEFT, padx=5)
         # T Window has 150us (need --trip-info-file)
         reload_fast_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 150{MU_GREEK}s",
                                           command=partial(self.on_reload, f"150us"))
-        reload_fast_trip_btn.pack(side=tk.LEFT, padx=10)
+        reload_fast_trip_btn.pack(side=tk.LEFT, padx=5)
         #
         # total entries
         nrows_lbl = ttk.Label(ctrl_frame1, textvariable=self.nrecords_var)
         nrows_lbl.pack(side=tk.RIGHT, padx=5)
         #
         preview_info_lbl = ttk.Label(ctrl_frame1, textvariable=self.preview_info_var)
-        preview_info_lbl.pack(side=tk.RIGHT, padx=10)
+        preview_info_lbl.pack(side=tk.RIGHT, padx=5)
         self.preview_info_lbl = preview_info_lbl
 
         # info label
@@ -421,7 +425,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         open_btn = ttk.Button(ctrl_frame1, text="Plot Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=5)
         open1_btn = ttk.Button(ctrl_frame1, text="Plot Raw", command=partial(self.on_open, False))
-        open1_btn.pack(side=tk.RIGHT, padx=10)
+        open1_btn.pack(side=tk.RIGHT, padx=5)
 
         # data/image info
         img_info_lbl = ttk.Label(ctrl_frame2, textvariable=self.img_info_var)
@@ -432,7 +436,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         opt_data_btn = ttk.Button(ctrl_frame2, text="Get Opt", command=partial(self.on_get_data, True))
         opt_data_btn.pack(side=tk.RIGHT, padx=5)
         raw_data_btn = ttk.Button(ctrl_frame2, text="Get Raw", command=partial(self.on_get_data, False))
-        raw_data_btn.pack(side=tk.RIGHT, padx=10)
+        raw_data_btn.pack(side=tk.RIGHT, padx=5)
 
     def on_get_data(self, is_opt: bool):
         """ Get the data, opt or raw
@@ -638,7 +642,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
             tree.configure(yscrollcommand=y_scroll.set)
         #
-        tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         # set column headers
         self._set_table_headers(tree, headers, column_widths)
         return tree
