@@ -344,7 +344,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
             nrow, ncol = [int(i) for i in fig_grid.split("x")]
         logger.debug("Plot user mode...")
         logger.debug(f"Invoking FigureWindow with {args.theme_name}")
-        _app = FigureWindow(fig_with_titles, "Visualizing the Post-mortem Data with dm-wave",
+        _app = FigureWindow(fig_with_titles,
+                            "DM-Wave: Visualizing the Post-Mortem Data Interactively",
                             (nrow, ncol),
                             notes=f"[{datetime.now().isoformat()[:-3]}] "
                                   f"Generated with the command: {' '.join(sys.argv)}",

@@ -60,7 +60,7 @@ class MainWindow(tk.Tk):
         self.lbl_sty_fg = self.style.lookup("TLabel", "foreground")
 
         #  window title
-        self.title("Post-mortem Data Viewer on MPS Faults")
+        self.title("DM-Wave Viewer: View Post-Mortem Data on MPS Faults")
 
         # start up callbacks
         self.after(1000, self.on_start_up)
