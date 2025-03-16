@@ -292,6 +292,10 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                             "or v1 raw data; if none is defined, plot with the whole data.")
     parser.add_argument("--fig-dpi", dest="fig_dpi", type=int,
                         help="Override the figure DPI setting.")
+    parser.add_argument("--theme", dest="theme_name", type=str, default="arc",
+                        help="The theme to style the UI, --list-themes to see options.")
+    parser.add_argument("--list-themes", action="store_true",
+                        help="List the supported UI themes.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -299,6 +303,11 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         args = parser.parse_args(sys.argv[1:])
 
     logger.setLevel(args.log_level)
+
+    if args.list_themes:
+        import ttkthemes
+        print(ttkthemes.THEMES)
+        sys.exit(0)
 
     if not args.img_types:
         img_types = ("png", )
@@ -333,12 +342,13 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
             ncol = math.ceil(n_figs / nrow)
         else:
             nrow, ncol = [int(i) for i in fig_grid.split("x")]
-        # plt.show()
+        logger.debug("Plot user mode...")
+        logger.debug(f"Invoking FigureWindow with {args.theme_name}")
         _app = FigureWindow(fig_with_titles, "Visualizing the Post-mortem Data with dm-wave",
                             (nrow, ncol),
                             notes=f"[{datetime.now().isoformat()[:-3]}] "
                                   f"Generated with the command: {' '.join(sys.argv)}",
-                            fig_dpi=args.fig_dpi)
+                            fig_dpi=args.fig_dpi, theme_name=args.theme_name)
         _app.mainloop()
         sys.exit(0)
 

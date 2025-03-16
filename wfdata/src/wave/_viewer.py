@@ -48,6 +48,7 @@ class MainWindow(tk.Tk):
         super().__init__()
 
         # styles
+        self.theme_name = theme_name
         configure_styles(self, theme_name=theme_name)
 
         if icon_path is not None:
@@ -176,6 +177,7 @@ class MainWindow(tk.Tk):
 
         def on_apply_theme(theme_name: str):
             logger.debug(f"Applying theme: {theme_name}")
+            self.theme_name = theme_name
             configure_styles(self, theme_name=theme_name)
 
         #
@@ -570,6 +572,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             # call plot tool
             cmdline = f"dm-wave plot -opt -i {data_path}" if is_opt else \
                       f"dm-wave plot -i {data_path}"
+            cmdline += f" --theme {self.theme_name}"
             if self.fig_dpi is not None:
                 cmdline += f" --fig-dpi {self.fig_dpi}"
             _info_msg = f"Ploting with the {data_path} (raw)" if not is_opt else \

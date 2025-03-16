@@ -6,18 +6,20 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 
+from ._log import logger
 
-class FigureWindow(tk.Tk):
+
+class FigureWindow(tk.Toplevel):
     # Present figures in a Tkinter GUI,
-    # keywords: fig_dpi
+    # keywords: fig_dpi, theme_name
     def __init__(self, figures: list[tuple],
                  window_title: str, grid: tuple[int, int],
                  padx: int = 5, pady: int = 5, notes: str = "",
                  **kws):
-        super().__init__()
+        super().__init__(kws.get('parent', None))
 
         # styles
-        configure_styles(self, theme_name="arc")
+        configure_styles(self, theme_name=kws.get("theme_name", "arc"))
         #
         self.title(window_title)
         self.protocol("WM_DELETE_WINDOW", self.quit)
@@ -79,9 +81,11 @@ def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
     except ModuleNotFoundError:
         root.style = ttk.Style()
         root.style.theme_use('default')
+        logger.debug("Configure styles with theme 'default'.")
     else:
         root.style = ttkthemes.ThemedStyle()
         root.style.theme_use(theme_name)
+        logger.debug(f"Configure styles with theme '{theme_name}'.")
     finally:
         # adjust the row height of Treeview
         _font = tk.font.nametofont("TkTextFont")
@@ -90,19 +94,31 @@ def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
         line_height = _font.metrics()['linespace']
         # Treeview
         root.style.configure("Treeview", rowheight=line_height)
+        logger.debug(f"Configure styles: adjust row height of treeview.")
 
 
 if __name__ == "__main__":
+    import matplotlib
+    matplotlib.use('tkagg')
+
+    import tkinter as tk
+
     import matplotlib.pyplot as plt
     import numpy as np
+
+    # with root
+    root = tk.Tk()
+    # without root
+    # root = None
 
     figs = []
     for i in range(4):
         fig, ax = plt.subplots()
         ax.plot(np.arange(10), np.random.random(10))
-        figs.append(fig)
+        figs.append((fig, f"figure-{i}"))
 
-    print(figs)
-    app = FigureWindow(figs, "Figures", (2, 5))
-    app.mainloop()
-
+    app = FigureWindow(figs, "Figures", (2, 5), parent=root)
+    if root is None:
+        app.mainloop()
+    else:
+        root.mainloop()
