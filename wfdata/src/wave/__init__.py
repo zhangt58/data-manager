@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import matplotlib
+matplotlib.use('tkagg')
+
 import sys
 from ._tools import (
     convert_tool,

@@ -13,11 +13,13 @@ from tkinter import (
     messagebox,
     scrolledtext,
 )
+import io
 from pathlib import Path
 from functools import partial
 from typing import Union
 from PIL import Image, ImageTk
 
+from ._data import read_data as read_datafile
 from ._tk import configure_styles
 from ._log import logger
 from ._ver import _version
@@ -31,6 +33,10 @@ RED_COLOR_HEX = "#E74C3C"
 DATA_PATH_CACHE = {}
 # is running on Windows?
 _IS_WIN_PLATFORM = platform.system() == "Windows"
+# themes
+THEMES = ("adapta", "arc", "breeze", "vista", "default") if _IS_WIN_PLATFORM else \
+         ("adapta", "arc", "breeze", "default")
+
 
 
 class MainWindow(tk.Tk):
@@ -42,6 +48,7 @@ class MainWindow(tk.Tk):
         super().__init__()
 
         # styles
+        self.theme_name = theme_name
         configure_styles(self, theme_name=theme_name)
 
         if icon_path is not None:
@@ -53,7 +60,10 @@ class MainWindow(tk.Tk):
         self.lbl_sty_fg = self.style.lookup("TLabel", "foreground")
 
         #  window title
-        self.title("Post-mortem Data Viewer on MPS Faults")
+        self.title("DM-Wave Viewer: View Post-Mortem Data on MPS Faults")
+
+        # start up callbacks
+        self.after(1000, self.on_start_up)
 
         # create menus
         self.create_menu()
@@ -105,8 +115,15 @@ class MainWindow(tk.Tk):
         self.create_table_panel()
         self.create_preview_panel()
 
-    def on_check_updates(self):
+    def on_start_up(self):
+        """ Execute after started up.
+        """
+        if _IS_WIN_PLATFORM:
+            self.on_check_updates(silent=True)
+
+    def on_check_updates(self, silent: bool = False):
         """ Check if new versions are available, Windows only.
+        if silent is set, do not pop up information messagebox if no updates available.
         """
         import re
         import tempfile
@@ -126,7 +143,8 @@ class MainWindow(tk.Tk):
         logger.info("Checking if new versions are avaiable...")
         pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
         pkg_name_pattern = "DataManager-Wave*.exe"
-        latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern))[-1]
+        latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern),
+                                 key=lambda i: str(i).split('.'))[-1]
         v = re.search(r"_(\d+\.\d+(?:\.\d+)?(?:-\d+)?)\.", str(latest_pkg_path))
         if v is not None:
             latest_pkg_ver = v.group(1)
@@ -139,9 +157,11 @@ class MainWindow(tk.Tk):
                 if r == messagebox.YES:
                     _install(latest_pkg_path)
                 return
-        messagebox.showinfo(title="Checking for Updates",
-            message="No Updates Available.",
-        )
+        logger.info("No Updates Available.")
+        if not silent:
+            messagebox.showinfo(title="Checking for Updates",
+                message="No Updates Available.",
+            )
 
     def create_menu(self):
         """ Create the menu bar and the items.
@@ -159,6 +179,7 @@ class MainWindow(tk.Tk):
 
         def on_apply_theme(theme_name: str):
             logger.debug(f"Applying theme: {theme_name}")
+            self.theme_name = theme_name
             configure_styles(self, theme_name=theme_name)
 
         #
@@ -171,13 +192,14 @@ class MainWindow(tk.Tk):
         theme_subm = tk.Menu(view_menu, tearoff=0)
         view_menu.add_cascade(label="Theme", menu=theme_subm)
         # View -> Theme
-        for _theme in ("adapta", "arc", "breeze", "scidblue", "vista"):
+        for _theme in THEMES:
             theme_subm.add_command(label=_theme, command=partial(on_apply_theme, _theme))
         # Help
         help_menu = tk.Menu(menu_bar, tearoff=0)
         help_menu.add_command(label="Documentation", accelerator="F1", command=on_help)
         if _IS_WIN_PLATFORM:
-            help_menu.add_command(label="Check for Updates", command=self.on_check_updates)
+            help_menu.add_command(label="Check for Updates",
+                                  command=partial(self.on_check_updates, False))
         help_menu.add_command(label="About", accelerator="Ctrl+A",
                               command=lambda:self.on_about(self))
         #
@@ -215,7 +237,8 @@ class MainWindow(tk.Tk):
         # filter info
         if filter == "150us":
             if df_info is None:
-                self.info_var.set("MTCA trip info is not available!")
+                self.set_var(self.info_var, "MTCA trip info is not available!",
+                             DEFAULT_INFO_STRING, self.info_lbl, RED_COLOR_HEX, self.lbl_sty_fg)
             else:
                 _df = df_info.set_index('Fault_ID')
                 idx = _df[_df["T Window"].astype(str).str.contains(
@@ -225,6 +248,20 @@ class MainWindow(tk.Tk):
                 df = df1.loc[idx1].reset_index()
                 self.info_var.set(DEFAULT_INFO_STRING)
         return df, df_info
+
+    def set_var(self, var_obj: tk.StringVar, new_val: str,
+                default_val: str, linked_obj: ttk.Label,
+                new_fg: str, default_fg: str, ms_stay: float = 1000):
+        """ Set *var_obj* with *new_val* for *ms_stay* milliseconds,
+        then reset to *default_val*. The foreground color of the linked label
+        object could be set with *linked_obj* and *new_fg* and *default_fg*.
+        """
+        var_obj.set(new_val)
+        linked_obj.config(foreground=new_fg)
+        def _reset():
+            var_obj.set(default_val)
+            linked_obj.config(foreground=default_fg)
+        self.after(ms_stay, _reset)
 
     def create_table_panel(self):
         """ Create the table for MPS faults data
@@ -285,18 +322,18 @@ class MainWindow(tk.Tk):
         # description = MTCA06
         reload_mtca_btn = ttk.Button(ctrl_frame1, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
-        reload_mtca_btn.pack(side=tk.LEFT, padx=10)
+        reload_mtca_btn.pack(side=tk.LEFT, padx=5)
         # T Window has 150us (need --trip-info-file)
         reload_fast_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 150{MU_GREEK}s",
                                           command=partial(self.on_reload, f"150us"))
-        reload_fast_trip_btn.pack(side=tk.LEFT, padx=10)
+        reload_fast_trip_btn.pack(side=tk.LEFT, padx=5)
         #
         # total entries
         nrows_lbl = ttk.Label(ctrl_frame1, textvariable=self.nrecords_var)
         nrows_lbl.pack(side=tk.RIGHT, padx=5)
         #
         preview_info_lbl = ttk.Label(ctrl_frame1, textvariable=self.preview_info_var)
-        preview_info_lbl.pack(side=tk.RIGHT, padx=10)
+        preview_info_lbl.pack(side=tk.RIGHT, padx=5)
         self.preview_info_lbl = preview_info_lbl
 
         # info label
@@ -348,8 +385,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
     def create_preview_panel(self):
         # right panel
         # |- image label
-        # |- [fit]   [Plot Raw]  [Plot Opt]
-        # |-         [Get Raw ]  [Get Opt ]
+        # |- [fit][Copy]   [Plot Raw][Plot Opt]
+        # |-               [Get Raw ][Get Opt ]
 
         self.right_panel.rowconfigure(0, weight=1)
         self.right_panel.rowconfigure(1, weight=0)
@@ -385,11 +422,14 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         fit_btn = ttk.Button(ctrl_frame1, text="Fit", command=self.on_fit_image,
                              width=4)
         fit_btn.pack(side=tk.LEFT, padx=5)
+        save_img_btn = ttk.Button(ctrl_frame1, text="Save", command=self.on_save_image,
+                                  width=5)
+        save_img_btn.pack(side=tk.LEFT, padx=5)
         # plot
         open_btn = ttk.Button(ctrl_frame1, text="Plot Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=5)
         open1_btn = ttk.Button(ctrl_frame1, text="Plot Raw", command=partial(self.on_open, False))
-        open1_btn.pack(side=tk.RIGHT, padx=10)
+        open1_btn.pack(side=tk.RIGHT, padx=5)
 
         # data/image info
         img_info_lbl = ttk.Label(ctrl_frame2, textvariable=self.img_info_var)
@@ -400,23 +440,22 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         opt_data_btn = ttk.Button(ctrl_frame2, text="Get Opt", command=partial(self.on_get_data, True))
         opt_data_btn.pack(side=tk.RIGHT, padx=5)
         raw_data_btn = ttk.Button(ctrl_frame2, text="Get Raw", command=partial(self.on_get_data, False))
-        raw_data_btn.pack(side=tk.RIGHT, padx=10)
+        raw_data_btn.pack(side=tk.RIGHT, padx=5)
 
     def on_get_data(self, is_opt: bool):
         """ Get the data, opt or raw
         """
         data_path = self.find_data_path(self.loaded_image_ftid, is_opt)
         if data_path is None or not data_path.is_file():
-            self.img_info_var.set(f"Invalid data path for ID {self.loaded_image_ftid}.")
-            self.img_info_lbl.config(foreground=RED_COLOR_HEX)
+            self.set_var(self.img_info_var, f"Invalid data path for ID {self.loaded_image_ftid}.",
+                         "", self.img_info_lbl, RED_COLOR_HEX, self.lbl_sty_fg)
         else:
-            self.img_info_lbl.config(foreground=self.lbl_sty_fg)
-            dst_pth, err = save_data(data_path)
+            dst_pth, err = save_data(data_path, is_opt)
             if dst_pth is None:
                 return
             if err is None:
-                self.img_info_var.set(f"Downloaded {data_path.name}")
-                self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+                self.set_var(self.img_info_var, f"Downloaded {data_path.name}", "",
+                             self.img_info_lbl, self.lbl_sty_fg, self.lbl_sty_fg)
                 r = messagebox.showinfo(
                       title="Download Data",
                       message=f"Successfully Downloaded {data_path.name}",
@@ -433,6 +472,59 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                     message=f"Error Downloading {data_path.name}",
                     detail=err
                 )
+
+    def save_image(self, img_filepath: Path) -> tuple[Union[Path, None], Union[str, None]]:
+        initial_dir = Path("~").expanduser().joinpath("Downloads")
+        src_filename = img_filepath.name
+        _file_types = [
+            ("PNG Files", "*.png"),
+        ]
+        dst_file_path = filedialog.asksaveasfilename(
+                title="Save As",
+                filetypes=_file_types,
+                initialdir=initial_dir,
+                defaultextension=".png",
+                initialfile=src_filename,
+        )
+        if not dst_file_path:
+            return None, None
+        try:
+            shutil.copy2(img_filepath, dst_file_path)
+        except Exception as e:
+            logger.error(f"Failed save {img_filepath} -> {dst_file_path}: {e}")
+            return Path(dst_file_path), f"{e}"
+        else:
+            logger.debug(f"Saved {img_filepath} -> {dst_file_path}")
+            return Path(dst_file_path), None
+
+    def on_save_image(self):
+        """ Save image.
+        """
+        if self.loaded_img_filepath is None:
+            return
+        img_filepath = Path(self.loaded_img_filepath)
+        dst_pth, err = self.save_image(img_filepath)
+        if dst_pth is None:
+            return
+        if err is None:
+            self.set_var(self.img_info_var, f"Downloaded {img_filepath.name}",
+                         "", self.img_info_lbl, self.lbl_sty_fg, self.lbl_sty_fg)
+            r = messagebox.showinfo(
+                  title="Download Image",
+                  message=f"Successfully Downloaded {img_filepath.name}",
+                  detail=f"Saved as {dst_pth}",
+                  type=messagebox.OKCANCEL)
+            if r == messagebox.OK:
+                if _IS_WIN_PLATFORM:
+                    _cmd = f"explorer /select,{dst_pth}"
+                    logger.info(f"Revealing {dst_pth} in File Explorer")
+                    subprocess.Popen(_cmd, shell=True)
+        else:
+            messagebox.showwarning(
+                title="Download Image",
+                message=f"Error Downloading {img_filepath.name}",
+                detail=err
+            )
 
     def on_fit_image(self):
         """ Fit the size of image to the right panel.
@@ -472,8 +564,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         if data_path is None or not data_path.is_file():
             _s = "opt" if is_opt else "raw"
             msg = f"Invalid {_s} data file for ID {self.loaded_image_ftid}"
-            self.img_info_var.set(msg)
-            self.img_info_lbl.config(foreground=RED_COLOR_HEX)
+            self.set_var(self.img_info_var, msg, "", self.img_info_lbl,
+                         RED_COLOR_HEX, self.lbl_sty_fg)
             logger.error(msg)
             # remove from the cache
             DATA_PATH_CACHE.pop(f"{self.loaded_image_ftid}-r", None)
@@ -482,14 +574,15 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             # call plot tool
             cmdline = f"dm-wave plot -opt -i {data_path}" if is_opt else \
                       f"dm-wave plot -i {data_path}"
+            cmdline += f" --theme {self.theme_name}"
             if self.fig_dpi is not None:
                 cmdline += f" --fig-dpi {self.fig_dpi}"
             _info_msg = f"Ploting with the {data_path} (raw)" if not is_opt else \
                         f"Ploting with the {data_path} (opt)"
             logger.info(_info_msg)
             subprocess.Popen(cmdline, shell=True)
-            self.img_info_var.set(f"Plotting with {data_path.name}")
-            self.img_info_lbl.config(foreground=self.lbl_sty_fg)
+            self.set_var(self.img_info_var, f"Plotting with {data_path.name}", "",
+                         self.img_info_lbl, self.lbl_sty_fg, self.lbl_sty_fg)
 
     def find_data_path(self, ftid: int, is_opt: bool = True) -> Union[Path, None]:
         if ftid is None:
@@ -535,8 +628,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         else:
             msg = f"No image found for ID {ftid}"
             logger.warning(msg)
-            self.info_var.set(msg)
-            self.info_lbl.config(foreground=RED_COLOR_HEX)
+            self.set_var(self.info_var, msg, DEFAULT_INFO_STRING, self.info_lbl,
+                         RED_COLOR_HEX, self.lbl_sty_fg)
 
     def place_table(self, parent_frame, headers: list[str],
                     xscroll_on: bool = True, yscroll_on: bool = True,
@@ -554,7 +647,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
             tree.configure(yscrollcommand=y_scroll.set)
         #
-        tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         # set column headers
         self._set_table_headers(tree, headers, column_widths)
         return tree
@@ -606,25 +699,71 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.present_main_data()
 
 
-def save_data(src_file_path: Path) -> tuple[Union[Path, None], Union[str, None]]:
+def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Union[str, None]]:
     initial_dir = Path("~").expanduser().joinpath("Downloads")
+    src_filename = src_file_path.name
+    src_fn_noext = src_filename.rsplit(".", 1)[0]
+    if is_opt:
+        _file_types = [
+            ("HDF5 Files", "*.h5"),
+            ("CSV Files", "*.csv"),
+            ("XLSX Files", "*.xlsx"),
+        ]
+    else:
+        _file_types = [
+            ("HDF5 Files", "*.h5"),
+        ]
     dst_file_path = filedialog.asksaveasfilename(
             title="Save As",
-            defaultextension=".h5",
-            filetypes=[("HDF5 Files", "*.h5"), ("All Files", "*.*")],
+            filetypes=_file_types,
             initialdir=initial_dir,
-            initialfile=src_file_path.name,
+            initialfile=src_fn_noext,
     )
     if not dst_file_path:
         return None, None
     dst_file_path = Path(dst_file_path)
+    dst_file_ext = dst_file_path.suffix
+    if dst_file_ext == '':
+        return None, None
     try:
-        shutil.copy2(src_file_path, dst_file_path)
+        if is_opt:
+            if dst_file_ext == ".h5":
+                with pd.HDFStore(src_file_path, mode="r") as src_store:
+                    keys = src_store.keys()
+                    t_start = src_store.get_storer('TimeWindow').attrs.t_start
+                    t_zero = src_store.get_storer('TimeWindow').attrs.t_zero
+                    with pd.HDFStore(dst_file_path, mode="w",
+                                     complib="zlib", complevel=9) as dst_store:
+                        for k in keys:
+                            dst_store.put(k, src_store[k])
+                        dst_store.get_storer('TimeWindow').attrs.t_start = t_start
+                        dst_store.get_storer('TimeWindow').attrs.t_zero = t_zero
+            else:
+                df, _ = read_datafile(src_file_path, t_range=None, is_opt=is_opt)
+                if dst_file_ext == ".csv":
+                    df.to_csv(dst_file_path)
+                elif dst_file_ext == ".xlsx":
+                    df[["time_sec", "time_usec"]] = \
+                        df.index.map(lambda i: (int(i.timestamp() * 1e6 // 1e6),
+                                            int(i.timestamp() * 1e6 % 1e6))).to_list()
+                    df.to_excel(dst_file_path, index=False)
+        else:
+            # raw
+            if dst_file_ext == ".h5":
+                with pd.HDFStore(src_file_path, mode="r") as src_store:
+                    keys = src_store.keys()
+                    with pd.HDFStore(dst_file_path, mode="w",
+                                     complib="zlib", complevel=9) as dst_store:
+                        for k in keys:
+                            dst_store.put(k, src_store[k])
+            else:
+                raise RuntimeError(
+                        f"No support exporting raw .h5 file as {dst_file_ext} type.")
     except Exception as e:
-        logger.error(f"Copy failed {src_file_path} -> {dst_file_path}")
+        logger.error(f"Failed downloading {src_file_path} -> {dst_file_path}: {e}")
         return dst_file_path, f"{e}"
     else:
-        logger.debug(f"Copied {src_file_path} -> {dst_file_path}")
+        logger.debug(f"Saved {src_file_path} -> {dst_file_path}")
         return dst_file_path, None
 
 
@@ -638,4 +777,3 @@ def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: 
     app.minsize(width=int(w), height=int(h))
     logger.info(f"Set the initial size {geometry}")
     app.mainloop()
-

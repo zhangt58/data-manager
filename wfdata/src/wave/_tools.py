@@ -292,6 +292,10 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                             "or v1 raw data; if none is defined, plot with the whole data.")
     parser.add_argument("--fig-dpi", dest="fig_dpi", type=int,
                         help="Override the figure DPI setting.")
+    parser.add_argument("--theme", dest="theme_name", type=str, default="arc",
+                        help="The theme to style the UI, --list-themes to see options.")
+    parser.add_argument("--list-themes", action="store_true",
+                        help="List the supported UI themes.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -299,6 +303,11 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         args = parser.parse_args(sys.argv[1:])
 
     logger.setLevel(args.log_level)
+
+    if args.list_themes:
+        import ttkthemes
+        print(ttkthemes.THEMES)
+        sys.exit(0)
 
     if not args.img_types:
         img_types = ("png", )
@@ -333,12 +342,14 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
             ncol = math.ceil(n_figs / nrow)
         else:
             nrow, ncol = [int(i) for i in fig_grid.split("x")]
-        # plt.show()
-        _app = FigureWindow(fig_with_titles, "Visualizing the Post-mortem Data with dm-wave",
+        logger.debug("Plot user mode...")
+        logger.debug(f"Invoking FigureWindow with {args.theme_name}")
+        _app = FigureWindow(fig_with_titles,
+                            "DM-Wave: Visualizing the Post-Mortem Data Interactively",
                             (nrow, ncol),
                             notes=f"[{datetime.now().isoformat()[:-3]}] "
                                   f"Generated with the command: {' '.join(sys.argv)}",
-                            fig_dpi=args.fig_dpi)
+                            fig_dpi=args.fig_dpi, theme_name=args.theme_name)
         _app.mainloop()
         sys.exit(0)
 
@@ -423,7 +434,7 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     if not img_outpaths:
         return
 
-    df, t0_s = _read_data(data_filepath, is_opt, t_range)
+    df, t0_s = read_data(data_filepath, t_range, is_opt)
     if df is None:
         logger.warning(f"Skip processing {data_filepath}")
         return
@@ -445,25 +456,11 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
     plt.close(fig)
 
 
-def _read_data(data_filepath: Path, is_opt: bool = False,
-               t_range: Union[None, tuple[int, int]] = None):
-    if is_opt:
-        # read the converted file, smaller size.
-        store = pd.HDFStore(data_filepath)
-        t0_s = store.get_storer('TimeWindow').attrs.t_zero
-        df = pd.concat([store[k] for k in store.keys()], axis=1)
-        store.close()
-    else:
-        # read the merged (v0) or v1 raw file.
-        df, t0_s = read_data(data_filepath, t_range)
-    return df, t0_s
-
-
 def create_plot(data_filepath: Path, is_opt: bool = False,
                 t_range: Union[None, tuple[int, int]] = None):
     """ Create the matplotlib figure object.
     """
-    df, t0_s = _read_data(data_filepath, is_opt, t_range)
+    df, t0_s = read_data(data_filepath, t_range, is_opt)
     return plot(df, t0_s, data_filepath.name)
 
 
