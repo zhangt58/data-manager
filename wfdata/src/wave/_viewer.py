@@ -702,7 +702,6 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
 def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Union[str, None]]:
     initial_dir = Path("~").expanduser().joinpath("Downloads")
     src_filename = src_file_path.name
-    src_fn_noext = src_filename.rsplit(".", 1)[0]
     if is_opt:
         _file_types = [
             ("HDF5 Files", "*.h5"),
@@ -717,7 +716,8 @@ def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Uni
             title="Save As",
             filetypes=_file_types,
             initialdir=initial_dir,
-            initialfile=src_fn_noext,
+            defaultextension=".h5",
+            initialfile=src_filename,
     )
     if not dst_file_path:
         return None, None
@@ -728,6 +728,7 @@ def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Uni
     try:
         if is_opt:
             if dst_file_ext == ".h5":
+                logger.debug(f"Saving as {dst_file_path}, OPT, zlib-9")
                 with pd.HDFStore(src_file_path, mode="r") as src_store:
                     keys = src_store.keys()
                     t_start = src_store.get_storer('TimeWindow').attrs.t_start
@@ -739,6 +740,7 @@ def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Uni
                         dst_store.get_storer('TimeWindow').attrs.t_start = t_start
                         dst_store.get_storer('TimeWindow').attrs.t_zero = t_zero
             else:
+                logger.debug(f"Saving as {dst_file_path}, OPT")
                 df, _ = read_datafile(src_file_path, t_range=None, is_opt=is_opt)
                 if dst_file_ext == ".csv":
                     df.to_csv(dst_file_path)
@@ -750,6 +752,7 @@ def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Uni
         else:
             # raw
             if dst_file_ext == ".h5":
+                logger.debug(f"Saving as {dst_file_path}, RAW, zlib-9")
                 with pd.HDFStore(src_file_path, mode="r") as src_store:
                     keys = src_store.keys()
                     with pd.HDFStore(dst_file_path, mode="w",
