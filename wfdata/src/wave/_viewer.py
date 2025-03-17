@@ -157,6 +157,7 @@ class MainWindow(tk.Tk):
                 if r == messagebox.YES:
                     _install(latest_pkg_path)
                 return
+        logger.info("No Updates Available.")
         if not silent:
             messagebox.showinfo(title="Checking for Updates",
                 message="No Updates Available.",
