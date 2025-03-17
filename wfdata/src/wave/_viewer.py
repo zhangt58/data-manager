@@ -144,7 +144,7 @@ class MainWindow(tk.Tk):
         pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
         pkg_name_pattern = "DataManager-Wave*.exe"
         latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern),
-                                 key=lambda i:i.split('.'))[-1]
+                                 key=lambda i: str(i).split('.'))[-1]
         v = re.search(r"_(\d+\.\d+(?:\.\d+)?(?:-\d+)?)\.", str(latest_pkg_path))
         if v is not None:
             latest_pkg_ver = v.group(1)
