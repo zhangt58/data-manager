@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import tkinter as tk
+from functools import partial
 from tkinter import ttk
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -58,9 +59,14 @@ class FigureWindow(tk.Toplevel):
         frame = ttk.LabelFrame(parent, text=title, borderwidth=1, relief=tk.GROOVE)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")
 
-        # toolbar
-        tb_frame = ttk.Frame(frame)
-        tb_frame.pack(fill=tk.X, padx=2, pady=2, expand=True)
+        # tools: toolbar + controls
+        tools_frame = ttk.Frame(frame)
+        tb_frame = ttk.Frame(tools_frame)
+        ctrl_frame = ttk.Frame(tools_frame)
+        #
+        tools_frame.pack(fill=tk.X, padx=2, pady=2, expand=True)
+        tb_frame.pack(side=tk.LEFT, expand=True, fill=tk.X)
+        ctrl_frame.pack(side=tk.RIGHT)
 
         # figure
         fig_frame = ttk.Frame(frame)
@@ -76,6 +82,24 @@ class FigureWindow(tk.Toplevel):
         #
         tb = NavigationToolbar2Tk(canvas, tb_frame)
         tb.update()
+
+        i = 1
+        for ax in figure.get_axes():
+            if ax.get_ylabel() == "NPERMIT":
+                continue
+            sync_btn = ttk.Button(ctrl_frame, text=f"Sync-{i}", width=6,
+                                  command=partial(sync_xlimits, figure, ax))
+            sync_btn.pack(side=tk.LEFT, padx=2)
+            i += 1
+
+
+def sync_xlimits(fig, ref_ax):
+    """ Set the xlimits for all axes with the xlimit from ref_ax.
+    """
+    xlimit = ref_ax.get_xlim()
+    for ax in fig.get_axes():
+        ax.set_xlim(xlimit)
+    fig.canvas.draw_idle()
 
 
 def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
