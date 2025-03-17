@@ -473,7 +473,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                     detail=err
                 )
 
-    def save_image(self, img_filepath: Path):
+    def save_image(self, img_filepath: Path) -> tuple[Union[Path, None], Union[str, None]]:
         initial_dir = Path("~").expanduser().joinpath("Downloads")
         src_filename = img_filepath.name
         _file_types = [
@@ -492,10 +492,10 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             shutil.copy2(img_filepath, dst_file_path)
         except Exception as e:
             logger.error(f"Failed save {img_filepath} -> {dst_file_path}: {e}")
-            return dst_file_path, f"{e}"
+            return Path(dst_file_path), f"{e}"
         else:
             logger.debug(f"Saved {img_filepath} -> {dst_file_path}")
-            return dst_file_path, None
+            return Path(dst_file_path), None
 
     def on_save_image(self):
         """ Save image.
