@@ -140,8 +140,11 @@ class MainWindow(tk.Tk):
                 if tmp_exefile.exists():
                     tmp_exefile.unlink()
 
-        logger.info("Checking if new versions are avaiable...")
         pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
+        if not pkg_dir.is_dir():
+            logger.error("Cannot check new versions...")
+            return
+        logger.info("Checking if new versions are avaiable...")
         pkg_name_pattern = "DataManager-Wave*.exe"
         latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern),
                                  key=lambda i: str(i).split('.'))[-1]
