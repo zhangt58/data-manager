@@ -411,6 +411,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.loaded_image_var.trace_add("write", self.update_preview)
         # initial image label
         self.image_lbl.config(text="Select an event to preview the image")
+        # selected item (iid = ftid)
+        self.selected_iid = None
 
         # control frame
         ctrl_frame = ttk.Frame(self.right_panel)
@@ -548,9 +550,10 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         _row = self.tree.focus()
         if _row:
             items = self.tree.item(_row, "values")
+            self.selected_iid = _row
             # show the figure if available
             self.display_figure(items)
-            logger.debug(f"Selected {_row}: {items}, {self.data.iloc[int(_row)].to_list()}")
+            logger.debug(f"Selected {_row}: {items}")
             # show the trip info
             self.display_info(items)
 
@@ -560,6 +563,12 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.refresh_table_data(filter)
         # clear the cache
         DATA_PATH_CACHE.clear()
+
+        # highlight the last selected row if applicable
+        if self.selected_iid is not None and self.tree.exists(self.selected_iid):
+            self.tree.selection_set(self.selected_iid)
+            self.tree.focus(self.selected_iid)
+            self.tree.see(self.selected_iid)
 
     def on_open(self, is_opt: bool):
         # find the data files
@@ -676,13 +685,13 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         """
         for i, row in self.data.iterrows():
             row.Power = f"{row.Power/1e3:.2f} kW" if row.Power > 1e3 else f"{int(row.Power)} W"
-            self.tree.insert("", tk.END, iid=i, values=row.to_list())
+            self.tree.insert("", tk.END, iid=row['Fault_ID'], values=row.to_list())
 
         # post the total number of entries
         self.nrecords_var.set(f"Total {self.data.shape[0]:>4d}")
 
-    def display_info(self, row):
-        ftid: int = int(row[0])
+    def display_info(self, items):
+        ftid: int = int(items[0])
         hit_row = self.data_info[self.data_info["Fault_ID"]==ftid]
         # expand to rows
         hit_df = hit_row.explode(column=self.data_info.columns[-3:].to_list()).reset_index(drop=True)
