@@ -64,7 +64,7 @@ class FigureWindow(tk.Toplevel):
         tb_frame = ttk.Frame(tools_frame)
         ctrl_frame = ttk.Frame(tools_frame)
         #
-        tools_frame.pack(fill=tk.X, padx=2, pady=2, expand=True)
+        tools_frame.pack(fill=tk.X, padx=2, pady=2)
         tb_frame.pack(side=tk.LEFT, expand=True, fill=tk.X)
         ctrl_frame.pack(side=tk.RIGHT)
 
