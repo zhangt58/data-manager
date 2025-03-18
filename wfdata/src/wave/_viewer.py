@@ -88,7 +88,7 @@ class MainWindow(tk.Tk):
         self.preview_info_var = tk.StringVar()
         self.preview_info_var.set("")
         self.nrecords_var = tk.StringVar()
-        self.nrecords_var.set(f"Total {0:>4d}")
+        self.nrecords_var.set(f"Total Events: {0:>4d}")
         # info for image panel
         self.img_info_var = tk.StringVar()
         self.img_info_var.set("")
@@ -308,7 +308,7 @@ class MainWindow(tk.Tk):
 
         # The widgets below the tree_frame
         # frame1
-        # |- [All] [MTCA06] Event on Preview
+        # |- [All] [MTCA06] Preview Event-#####  Total #
         # frame2
         # |- Info: xxxx
         ctrl_frame = ttk.Frame(data_frame)
@@ -331,18 +331,19 @@ class MainWindow(tk.Tk):
                                           command=partial(self.on_reload, f"150us"))
         reload_fast_trip_btn.pack(side=tk.LEFT, padx=5)
         #
-        # total entries
-        nrows_lbl = ttk.Label(ctrl_frame1, textvariable=self.nrecords_var)
-        nrows_lbl.pack(side=tk.RIGHT, padx=5)
-        #
+        # Event on preview
         preview_info_lbl = ttk.Label(ctrl_frame1, textvariable=self.preview_info_var)
-        preview_info_lbl.pack(side=tk.RIGHT, padx=5)
+        preview_info_lbl.pack(side=tk.RIGHT, padx=2)
         self.preview_info_lbl = preview_info_lbl
 
         # info label
         info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
         info_lbl.pack(side=tk.LEFT, fill=tk.X, padx=2)
         self.info_lbl = info_lbl
+        #
+        # total entries
+        nrows_lbl = ttk.Label(ctrl_frame2, textvariable=self.nrecords_var)
+        nrows_lbl.pack(side=tk.RIGHT, padx=2)
 
     def on_about(self, parent):
         about_dialog = tk.Toplevel(parent)
@@ -634,7 +635,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         if img_filepath is not None:
             self.loaded_image_ftid = ftid
             self.loaded_image_var.set(str(img_filepath))
-            self.preview_info_var.set(f"Event on Preview: {ftid}")
+            self.preview_info_var.set(f"Preview: Event-{ftid}")
             self.info_var.set(DEFAULT_INFO_STRING)
             self.info_lbl.config(foreground=self.lbl_sty_fg)
         else:
@@ -688,7 +689,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             self.tree.insert("", tk.END, iid=row['Fault_ID'], values=row.to_list())
 
         # post the total number of entries
-        self.nrecords_var.set(f"Total {self.data.shape[0]:>4d}")
+        self.nrecords_var.set(f"Total Events: {self.data.shape[0]:>4d}")
 
     def display_info(self, items):
         ftid: int = int(items[0])
