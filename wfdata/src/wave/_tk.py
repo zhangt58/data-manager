@@ -99,11 +99,11 @@ class FigureWindow(tk.Toplevel):
         # misc_frame (below figure frame)
         # other controls
         misc_frame = ttk.Frame(frame)
-        misc_frame.pack(fill=tk.X, padx=2, pady=2, side=tk.LEFT)
+        misc_frame.pack(fill=tk.X, padx=2, pady=2, side=tk.LEFT, expand=True)
         # lw
         lw_lbl = ttk.Label(misc_frame, text="Line Width")
         lw_sbox = ttk.Spinbox(misc_frame, from_=0.5, to=5, increment=0.5,
-                               state='readonly', width=4,
+                               state='readonly', width=4, justify=tk.CENTER,
                                command=partial(self.on_update_lw, figure))
         lw_lbl.pack(side=tk.LEFT, padx=2)
         lw_sbox.pack(side=tk.LEFT, padx=2)
@@ -111,20 +111,29 @@ class FigureWindow(tk.Toplevel):
         # ds
         ds_lbl = ttk.Label(misc_frame, text="Style")
         self.ds_var = tk.StringVar()
-        ds_cbb = ttk.Combobox(misc_frame, textvariable=self.ds_var, state="readonly",
+        ds_cbb = ttk.Combobox(misc_frame, textvariable=self.ds_var,
+                              state="readonly", justify=tk.CENTER,
                               values=["default", "steps"], width=8)
         ds_lbl.pack(side=tk.LEFT, padx=5)
         ds_cbb.pack(side=tk.LEFT, padx=2)
         ds_cbb.set("default")
         ds_cbb.bind("<<ComboboxSelected>>", partial(self.on_ds_changed, figure))
         # font size
-        fs_lbl = ttk.Label(misc_frame, text="+Fontsize")
+        fs_lbl = ttk.Label(misc_frame, text="+FontSize")
         fs_inc_sbox = ttk.Spinbox(misc_frame, from_=-4, to=10, increment=0.5,
-                                  state='readonly', width=4,
+                                  state='readonly', width=4, justify=tk.CENTER,
                                   command=partial(self.on_update_fontsize, figure))
         fs_lbl.pack(side=tk.LEFT, padx=5)
         fs_inc_sbox.pack(side=tk.LEFT, padx=2)
         self.fs_inc_sbox = fs_inc_sbox
+
+        # legend on/off checkbox
+        self.legend_toggle_var = tk.BooleanVar(value=True)
+        legend_toggle_chkbox = ttk.Checkbutton(misc_frame,
+                text="Legend", width=6,
+                variable=self.legend_toggle_var,
+                command=partial(self.on_toggle_legends, figure))
+        legend_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
 
         # --------------
         # | ctrl_frame |
@@ -150,6 +159,7 @@ class FigureWindow(tk.Toplevel):
                     bbox=dict(facecolor='w', alpha=0.9, edgecolor='k'))
             if 'Phi' in ax.get_ylabel():
                 ax_pha = ax
+                ax_pha_ylabel0: str = ax.get_ylabel()
                 self.pha0 = [l.get_ydata() for l in ax.get_lines()]
             sync_btn = ttk.Button(sync_frame, text=f"X{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
@@ -162,15 +172,6 @@ class FigureWindow(tk.Toplevel):
         auto_y_btn.pack(side=tk.LEFT, padx=1)
         sync_frame_w += 4
 
-        # legend on/off checkbox
-        self.legend_toggle_var = tk.BooleanVar(value=True)
-        legend_toggle_chkbox = ttk.Checkbutton(sync_frame,
-                text="Legend", width=6,
-                variable=self.legend_toggle_var,
-                command=partial(self.on_toggle_legends, figure))
-        legend_toggle_chkbox.pack(side=tk.RIGHT, padx=1)
-        sync_frame_w += 7
-
         # pha_frame
         sub_pha_lbl = ttk.Label(pha_frame, text="Φ-idx", width=5)
         sub_pha_txt = ttk.Entry(pha_frame, width=sync_frame_w + 1 - (5 + 2 + 3 + 4 * 1),
@@ -178,7 +179,8 @@ class FigureWindow(tk.Toplevel):
         sub_pha_txt.insert(0, "0")
         self.sub_pha_txt = sub_pha_txt
         reset_pha_btn = ttk.Button(pha_frame, text="Φ", width=2,
-                                   command=partial(self.on_reset_pha, figure, ax_pha))
+                                   command=partial(self.on_reset_pha, figure, ax_pha,
+                                                   ax_pha_ylabel0))
         sub_pha_btn = ttk.Button(pha_frame, text=f"ΔΦ", width=3,
                                  command=partial(self.on_sub_pha, figure, ax_pha))
         #
@@ -201,24 +203,28 @@ class FigureWindow(tk.Toplevel):
             msg = f"Invalid index of Phase waveform: {e}"
             logger.error(msg)
             messagebox.showwarning(
-                    title="Figure Relative Phases",
+                    title="Plot Self-diff Phases",
                     message=msg,
                     detail="Input an integer >= 0 as the index to select the "
                            "reference phase value for each trace"
             )
         else:
-            logger.debug(f"Subtract PHA[{idx}] for each trace.")
+            logger.debug(f"Subtract PHA[{idx}] from each trace.")
             for l, v in zip(ax.get_lines(), self.pha0):
                 l.set_ydata(v - v[idx])
             _auto_scale_y(ax)
+            fs = ax.yaxis.label.get_fontsize()
+            ax.set_ylabel("ΔΦ[$^o$] @ 80.5 MHz", fontsize=fs)
             fig.canvas.draw_idle()
 
-    def on_reset_pha(self, fig, ax):
+    def on_reset_pha(self, fig, ax, ylabel0):
         """ Reset trace phase waveform to the original.
         """
         for l, v in zip(ax.get_lines(), self.pha0):
             l.set_ydata(v)
         _auto_scale_y(ax)
+        fs = ax.yaxis.label.get_fontsize()
+        ax.set_ylabel(ylabel0, fontsize=fs)
         fig.canvas.draw_idle()
 
     def on_toggle_legends(self, fig):
