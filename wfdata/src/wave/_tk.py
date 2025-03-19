@@ -95,27 +95,33 @@ class FigureWindow(tk.Toplevel):
         ax_pha = None
         pha0: list = []
         i = 1
+        sync_lbl = ttk.Label(sync_frame, text="Sync", width=5)
+        sync_lbl.pack(side=tk.LEFT, padx=2)
         for ax in figure.get_axes():
             if ax.get_ylabel() == "NPERMIT":
                 continue
+            ax.text(-0.03, 1.03, f"{i}", transform=ax.transAxes,
+                    size="large",
+                    bbox=dict(facecolor='w', alpha=0.9, edgecolor='k'))
             if 'Phi' in ax.get_ylabel():
                 ax_pha = ax
                 pha0 = [l.get_ydata() for l in ax.get_lines()]
-            sync_btn = ttk.Button(sync_frame, text=f"Sync-{i}", width=6,
+            sync_btn = ttk.Button(sync_frame, text=f"T↔{i}", width=4,
                                   command=partial(sync_xlimits, figure, ax))
-            sync_btn.pack(side=tk.LEFT, padx=2)
+            sync_btn.pack(side=tk.LEFT, padx=1)
             i += 1
         # pha_frame
         sub_pha_lbl = ttk.Label(pha_frame, text="Φ-idx", width=5)
         sub_pha_lbl.pack(side=tk.LEFT, padx=2, pady=2)
-        sub_pha_txt = ttk.Entry(pha_frame, width=(i-1)*8-6-3-3-6, justify=tk.CENTER)
+        sub_pha_txt = ttk.Entry(pha_frame, width=(i - 1) * 5 + 7 - (5 + 2 + 3 + 3 * 2),
+                                justify=tk.CENTER)
         sub_pha_txt.insert(0, "0")
         sub_pha_txt.pack(side=tk.LEFT, padx=2, pady=2)
         self.sub_pha_txt = sub_pha_txt
-        reset_pha_btn = ttk.Button(pha_frame, text="RST", width=3,
+        reset_pha_btn = ttk.Button(pha_frame, text="Φ", width=2,
                                    command=partial(self.on_reset_pha, figure, ax_pha, pha0))
         reset_pha_btn.pack(side=tk.RIGHT, padx=2, pady=2)
-        sub_pha_btn = ttk.Button(pha_frame, text=f"REL", width=3,
+        sub_pha_btn = ttk.Button(pha_frame, text=f"ΔΦ", width=3,
                                  command=partial(self.on_sub_pha, figure, ax_pha))
         sub_pha_btn.pack(side=tk.RIGHT, padx=2, pady=2)
 
