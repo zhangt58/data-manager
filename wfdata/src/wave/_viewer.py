@@ -88,7 +88,7 @@ class MainWindow(tk.Tk):
         self.preview_info_var = tk.StringVar()
         self.preview_info_var.set("")
         self.nrecords_var = tk.StringVar()
-        self.nrecords_var.set(f"Total {0:>4d}")
+        self.nrecords_var.set(f"Total Events: {0:>4d}")
         # info for image panel
         self.img_info_var = tk.StringVar()
         self.img_info_var.set("")
@@ -140,8 +140,11 @@ class MainWindow(tk.Tk):
                 if tmp_exefile.exists():
                     tmp_exefile.unlink()
 
-        logger.info("Checking if new versions are avaiable...")
         pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
+        if not pkg_dir.is_dir():
+            logger.error("Cannot check new versions...")
+            return
+        logger.info("Checking if new versions are avaiable...")
         pkg_name_pattern = "DataManager-Wave*.exe"
         latest_pkg_path = sorted(pkg_dir.glob(pkg_name_pattern),
                                  key=lambda i: str(i).split('.'))[-1]
@@ -305,7 +308,7 @@ class MainWindow(tk.Tk):
 
         # The widgets below the tree_frame
         # frame1
-        # |- [All] [MTCA06] Event on Preview
+        # |- [All] [MTCA06] Preview Event-#####  Total #
         # frame2
         # |- Info: xxxx
         ctrl_frame = ttk.Frame(data_frame)
@@ -328,18 +331,19 @@ class MainWindow(tk.Tk):
                                           command=partial(self.on_reload, f"150us"))
         reload_fast_trip_btn.pack(side=tk.LEFT, padx=5)
         #
-        # total entries
-        nrows_lbl = ttk.Label(ctrl_frame1, textvariable=self.nrecords_var)
-        nrows_lbl.pack(side=tk.RIGHT, padx=5)
-        #
+        # Event on preview
         preview_info_lbl = ttk.Label(ctrl_frame1, textvariable=self.preview_info_var)
-        preview_info_lbl.pack(side=tk.RIGHT, padx=5)
+        preview_info_lbl.pack(side=tk.RIGHT, padx=2)
         self.preview_info_lbl = preview_info_lbl
 
         # info label
         info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
         info_lbl.pack(side=tk.LEFT, fill=tk.X, padx=2)
         self.info_lbl = info_lbl
+        #
+        # total entries
+        nrows_lbl = ttk.Label(ctrl_frame2, textvariable=self.nrecords_var)
+        nrows_lbl.pack(side=tk.RIGHT, padx=2)
 
     def on_about(self, parent):
         about_dialog = tk.Toplevel(parent)
@@ -408,6 +412,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.loaded_image_var.trace_add("write", self.update_preview)
         # initial image label
         self.image_lbl.config(text="Select an event to preview the image")
+        # selected item (iid = ftid)
+        self.selected_iid = None
 
         # control frame
         ctrl_frame = ttk.Frame(self.right_panel)
@@ -545,9 +551,10 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         _row = self.tree.focus()
         if _row:
             items = self.tree.item(_row, "values")
+            self.selected_iid = _row
             # show the figure if available
             self.display_figure(items)
-            logger.debug(f"Selected {_row}: {items}, {self.data.iloc[int(_row)].to_list()}")
+            logger.debug(f"Selected {_row}: {items}")
             # show the trip info
             self.display_info(items)
 
@@ -557,6 +564,12 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.refresh_table_data(filter)
         # clear the cache
         DATA_PATH_CACHE.clear()
+
+        # highlight the last selected row if applicable
+        if self.selected_iid is not None and self.tree.exists(self.selected_iid):
+            self.tree.selection_set(self.selected_iid)
+            self.tree.focus(self.selected_iid)
+            self.tree.see(self.selected_iid)
 
     def on_open(self, is_opt: bool):
         # find the data files
@@ -622,7 +635,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         if img_filepath is not None:
             self.loaded_image_ftid = ftid
             self.loaded_image_var.set(str(img_filepath))
-            self.preview_info_var.set(f"Event on Preview: {ftid}")
+            self.preview_info_var.set(f"Preview: Event-{ftid}")
             self.info_var.set(DEFAULT_INFO_STRING)
             self.info_lbl.config(foreground=self.lbl_sty_fg)
         else:
@@ -673,13 +686,13 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         """
         for i, row in self.data.iterrows():
             row.Power = f"{row.Power/1e3:.2f} kW" if row.Power > 1e3 else f"{int(row.Power)} W"
-            self.tree.insert("", tk.END, iid=i, values=row.to_list())
+            self.tree.insert("", tk.END, iid=row['Fault_ID'], values=row.to_list())
 
         # post the total number of entries
-        self.nrecords_var.set(f"Total {self.data.shape[0]:>4d}")
+        self.nrecords_var.set(f"Total Events: {self.data.shape[0]:>4d}")
 
-    def display_info(self, row):
-        ftid: int = int(row[0])
+    def display_info(self, items):
+        ftid: int = int(items[0])
         hit_row = self.data_info[self.data_info["Fault_ID"]==ftid]
         # expand to rows
         hit_df = hit_row.explode(column=self.data_info.columns[-3:].to_list()).reset_index(drop=True)

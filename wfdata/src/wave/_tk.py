@@ -64,7 +64,7 @@ class FigureWindow(tk.Toplevel):
         tb_frame = ttk.Frame(tools_frame)
         ctrl_frame = ttk.Frame(tools_frame)
         #
-        tools_frame.pack(fill=tk.X, padx=2, pady=2, expand=True)
+        tools_frame.pack(fill=tk.X, padx=2, pady=2)
         tb_frame.pack(side=tk.LEFT, expand=True, fill=tk.X)
         ctrl_frame.pack(side=tk.RIGHT)
 
@@ -83,14 +83,76 @@ class FigureWindow(tk.Toplevel):
         tb = NavigationToolbar2Tk(canvas, tb_frame)
         tb.update()
 
+        # --------------
+        # | ctrl_frame |
+        # --------------
+        # | sync-1,2,3 |
+        # | [i] -PHA[i]|  # each phase trace - i-th value to display the relative trend
+        sync_frame = ttk.Frame(ctrl_frame)
+        sync_frame.pack(side=tk.TOP)
+        pha_frame = ttk.Frame(ctrl_frame)
+        pha_frame.pack(side=tk.BOTTOM)
+        ax_pha = None
+        pha0: list = []
         i = 1
+        sync_lbl = ttk.Label(sync_frame, text="Sync", width=5)
+        sync_lbl.pack(side=tk.LEFT, padx=2)
         for ax in figure.get_axes():
             if ax.get_ylabel() == "NPERMIT":
                 continue
-            sync_btn = ttk.Button(ctrl_frame, text=f"Sync-{i}", width=6,
+            ax.text(-0.03, 1.03, f"{i}", transform=ax.transAxes,
+                    size="large",
+                    bbox=dict(facecolor='w', alpha=0.9, edgecolor='k'))
+            if 'Phi' in ax.get_ylabel():
+                ax_pha = ax
+                pha0 = [l.get_ydata() for l in ax.get_lines()]
+            sync_btn = ttk.Button(sync_frame, text=f"T↔{i}", width=4,
                                   command=partial(sync_xlimits, figure, ax))
-            sync_btn.pack(side=tk.LEFT, padx=2)
+            sync_btn.pack(side=tk.LEFT, padx=1)
             i += 1
+        # pha_frame
+        sub_pha_lbl = ttk.Label(pha_frame, text="Φ-idx", width=5)
+        sub_pha_lbl.pack(side=tk.LEFT, padx=2, pady=2)
+        sub_pha_txt = ttk.Entry(pha_frame, width=(i - 1) * 5 + 7 - (5 + 2 + 3 + 3 * 2),
+                                justify=tk.CENTER)
+        sub_pha_txt.insert(0, "0")
+        sub_pha_txt.pack(side=tk.LEFT, padx=2, pady=2)
+        self.sub_pha_txt = sub_pha_txt
+        reset_pha_btn = ttk.Button(pha_frame, text="Φ", width=2,
+                                   command=partial(self.on_reset_pha, figure, ax_pha, pha0))
+        reset_pha_btn.pack(side=tk.RIGHT, padx=2, pady=2)
+        sub_pha_btn = ttk.Button(pha_frame, text=f"ΔΦ", width=3,
+                                 command=partial(self.on_sub_pha, figure, ax_pha))
+        sub_pha_btn.pack(side=tk.RIGHT, padx=2, pady=2)
+
+    def on_sub_pha(self, fig, ax):
+        """ Subtract the PHA[i] for each trace, to show the relative waveform.
+        """
+        s = self.sub_pha_txt.get()
+        try:
+            idx = int(s)
+        except ValueError as e:
+            msg = f"Invalid index of Phase waveform: {e}"
+            logger.error(msg)
+            messagebox.showwarning(
+                    title="Figure Relative Phases",
+                    message=msg,
+                    detail="Input an integer >= 0 as the index to select the "
+                           "reference phase value for each trace"
+            )
+        else:
+            logger.debug(f"Subtract PHA[{idx}] for each trace.")
+            for trace in ax.get_lines():
+                ydata = trace.get_ydata()
+                trace.set_ydata(ydata - ydata[idx])
+            fig.canvas.draw_idle()
+
+    def on_reset_pha(self, fig, ax, pha0):
+        """ Reset trace phase waveform to the original.
+        """
+        for l, v in zip(ax.get_lines(), pha0):
+            l.set_ydata(v)
+        fig.canvas.draw_idle()
 
 
 def sync_xlimits(fig, ref_ax):
