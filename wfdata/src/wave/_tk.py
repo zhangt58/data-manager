@@ -136,7 +136,7 @@ class FigureWindow(tk.Toplevel):
         pha_frame = ttk.Frame(ctrl_frame)
         pha_frame.pack(side=tk.BOTTOM)
         ax_pha = None
-        pha0: list = []
+        self.pha0: list = []
         i = 1
         sync_frame_w = 0
         sync_lbl = ttk.Label(sync_frame, text="↔", width=2)
@@ -150,7 +150,7 @@ class FigureWindow(tk.Toplevel):
                     bbox=dict(facecolor='w', alpha=0.9, edgecolor='k'))
             if 'Phi' in ax.get_ylabel():
                 ax_pha = ax
-                pha0 = [l.get_ydata() for l in ax.get_lines()]
+                self.pha0 = [l.get_ydata() for l in ax.get_lines()]
             sync_btn = ttk.Button(sync_frame, text=f"X{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
             sync_btn.pack(side=tk.LEFT, padx=1)
@@ -178,7 +178,7 @@ class FigureWindow(tk.Toplevel):
         sub_pha_txt.insert(0, "0")
         self.sub_pha_txt = sub_pha_txt
         reset_pha_btn = ttk.Button(pha_frame, text="Φ", width=2,
-                                   command=partial(self.on_reset_pha, figure, ax_pha, pha0))
+                                   command=partial(self.on_reset_pha, figure, ax_pha))
         sub_pha_btn = ttk.Button(pha_frame, text=f"ΔΦ", width=3,
                                  command=partial(self.on_sub_pha, figure, ax_pha))
         #
@@ -208,16 +208,15 @@ class FigureWindow(tk.Toplevel):
             )
         else:
             logger.debug(f"Subtract PHA[{idx}] for each trace.")
-            for trace in ax.get_lines():
-                ydata = trace.get_ydata()
-                trace.set_ydata(ydata - ydata[idx])
+            for l, v in zip(ax.get_lines(), self.pha0):
+                l.set_ydata(v - v[idx])
             _auto_scale_y(ax)
             fig.canvas.draw_idle()
 
-    def on_reset_pha(self, fig, ax, pha0):
+    def on_reset_pha(self, fig, ax):
         """ Reset trace phase waveform to the original.
         """
-        for l, v in zip(ax.get_lines(), pha0):
+        for l, v in zip(ax.get_lines(), self.pha0):
             l.set_ydata(v)
         _auto_scale_y(ax)
         fig.canvas.draw_idle()
