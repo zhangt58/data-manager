@@ -159,6 +159,7 @@ class FigureWindow(tk.Toplevel):
                     bbox=dict(facecolor='w', alpha=0.9, edgecolor='k'))
             if 'Phi' in ax.get_ylabel():
                 ax_pha = ax
+                ax_pha_ylabel0: str = ax.get_ylabel()
                 self.pha0 = [l.get_ydata() for l in ax.get_lines()]
             sync_btn = ttk.Button(sync_frame, text=f"X{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
@@ -178,7 +179,8 @@ class FigureWindow(tk.Toplevel):
         sub_pha_txt.insert(0, "0")
         self.sub_pha_txt = sub_pha_txt
         reset_pha_btn = ttk.Button(pha_frame, text="Φ", width=2,
-                                   command=partial(self.on_reset_pha, figure, ax_pha))
+                                   command=partial(self.on_reset_pha, figure, ax_pha,
+                                                   ax_pha_ylabel0))
         sub_pha_btn = ttk.Button(pha_frame, text=f"ΔΦ", width=3,
                                  command=partial(self.on_sub_pha, figure, ax_pha))
         #
@@ -201,24 +203,28 @@ class FigureWindow(tk.Toplevel):
             msg = f"Invalid index of Phase waveform: {e}"
             logger.error(msg)
             messagebox.showwarning(
-                    title="Figure Relative Phases",
+                    title="Plot Self-diff Phases",
                     message=msg,
                     detail="Input an integer >= 0 as the index to select the "
                            "reference phase value for each trace"
             )
         else:
-            logger.debug(f"Subtract PHA[{idx}] for each trace.")
+            logger.debug(f"Subtract PHA[{idx}] from each trace.")
             for l, v in zip(ax.get_lines(), self.pha0):
                 l.set_ydata(v - v[idx])
             _auto_scale_y(ax)
+            fs = ax.yaxis.label.get_fontsize()
+            ax.set_ylabel("ΔΦ[$^o$] @ 80.5 MHz", fontsize=fs)
             fig.canvas.draw_idle()
 
-    def on_reset_pha(self, fig, ax):
+    def on_reset_pha(self, fig, ax, ylabel0):
         """ Reset trace phase waveform to the original.
         """
         for l, v in zip(ax.get_lines(), self.pha0):
             l.set_ydata(v)
         _auto_scale_y(ax)
+        fs = ax.yaxis.label.get_fontsize()
+        ax.set_ylabel(ylabel0, fontsize=fs)
         fig.canvas.draw_idle()
 
     def on_toggle_legends(self, fig):
