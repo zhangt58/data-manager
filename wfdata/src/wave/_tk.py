@@ -177,7 +177,7 @@ class FigureWindow(tk.Toplevel):
                 self.pha0 = [l.get_ydata() for l in ax.get_lines()]
                 self.pha0_t = ax.get_lines()[0].get_xdata()
                 # print(type(self.pha0[0]), self.pha0[0][:100])
-            sync_btn = ttk.Button(xaxis_frame, text=f"X{i}", width=3,
+            sync_btn = ttk.Button(xaxis_frame, text=f"{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
             sync_btn.pack(side=tk.LEFT, padx=1)
             i += 1
