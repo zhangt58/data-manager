@@ -19,7 +19,7 @@ DEFAULT_MPL_FIG_DPI = mpl.rcParams['figure.dpi']
 
 
 def _process_format_v0(store):
-    logger.info(f"Reading {store.filename} per format v0")
+    logger.debug(f"Processing {store.filename} (v0 raw)...")
     try:
         # BCM
         all_keys = store.keys()
@@ -48,11 +48,12 @@ def _process_format_v0(store):
         logger.error(f"Error processing BPM {store.filename}: {e}")
         return None, None
     #
+    logger.debug(f"Processing {store.filename} (v0 raw)...done!")
     return bcm_dfs + bpm_dfs, bpm_names
 
 
 def _process_format_v1(store):
-    logger.info(f"Reading {store.filename} per format v1")
+    logger.debug(f"Processing {store.filename} (v1 raw)...")
     df_t0 = store['/t0']
     df_grp = store['/grp']
     # df_info = store['/info']
@@ -87,6 +88,7 @@ def _process_format_v1(store):
     #
     bpm_names = [f"BPM_{i}" for i in bpm_grps]
     #
+    logger.debug(f"Processing {store.filename} (v1 raw)...done!")
     return bcm_dfs + bpm_dfs, bpm_names
 
 
@@ -96,6 +98,7 @@ def read_data(filepath: Union[str, Path],
     """ Read and consolidate dataset, if is_opt is set, deal with optimized dataset,
     otherwise, read from raw.
     """
+    logger.info(f"Reading {filepath}...")
     if is_opt:
         # read the converted file, smaller size.
         with pd.HDFStore(filepath, mode="r") as store:
@@ -104,7 +107,9 @@ def read_data(filepath: Union[str, Path],
         #
         t0_idx: int = (df_all["t_us"]==0.0).argmax()
         if t_range is not None:
+            logger.info(f"Reading {filepath}...done!")
             return df_all.iloc[t0_idx + t_range[0]:t0_idx + t_range[1], :], t0_s
+        logger.info(f"Reading {filepath}...done!")
         return df_all, t0_s
 
     # read with raw
@@ -165,6 +170,7 @@ def read_data(filepath: Union[str, Path],
     # drop BPM_D####:MAG/PHAi columns
     cols_to_drop = df.filter(regex=r"BPM_.*[1-4]{1}$").columns
     df.drop(columns=cols_to_drop, inplace=True)
+    logger.info(f"Reading {filepath}...done!")
     return df, t0_str
 
 
