@@ -177,7 +177,7 @@ class FigureWindow(tk.Toplevel):
                 self.pha0 = [l.get_ydata() for l in ax.get_lines()]
                 self.pha0_t = ax.get_lines()[0].get_xdata()
                 # print(type(self.pha0[0]), self.pha0[0][:100])
-            sync_btn = ttk.Button(xaxis_frame, text=f"X{i}", width=3,
+            sync_btn = ttk.Button(xaxis_frame, text=f"{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
             sync_btn.pack(side=tk.LEFT, padx=1)
             i += 1
@@ -189,7 +189,7 @@ class FigureWindow(tk.Toplevel):
         auto_y_btn.pack(side=tk.RIGHT, padx=1)
 
         # pha_frame
-        sub_pha_lbl = ttk.Label(pha_frame, text="Ref.Φ from <T Range>:")
+        sub_pha_lbl = ttk.Label(pha_frame, text="Ref.Φ with <T Range>:")
         sub_pha_txt1 = ttk.Entry(pha_frame, justify=tk.CENTER, width=8)
         self.sub_pha_txt1 = sub_pha_txt1
         sub_pha_txt2 = ttk.Entry(pha_frame, justify=tk.CENTER, width=8)
@@ -201,6 +201,9 @@ class FigureWindow(tk.Toplevel):
                                                    ax_pha_ylabel0))
         sub_pha_btn = ttk.Button(pha_frame, text=f"ΔΦ", width=3,
                                  command=partial(self.on_sub_pha, figure, ax_pha))
+        # help info
+        help_btn = ttk.Button(pha_frame, text="?", width=2,
+                              command=self.on_help_figure_controls)
         #
         sub_pha_lbl.pack(side=tk.LEFT, padx=2, pady=2)
         sub_pha_lbl_from.pack(side=tk.LEFT, padx=2, pady=2)
@@ -209,6 +212,7 @@ class FigureWindow(tk.Toplevel):
         sub_pha_txt2.pack(side=tk.LEFT, padx=2, pady=2)
         sub_pha_btn.pack(side=tk.LEFT, padx=2, pady=2)
         reset_pha_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        help_btn.pack(side=tk.RIGHT, padx=2, pady=2)
 
         # initialize
         lw_sbox.set(ax_pha.get_lines()[0].get_lw())
@@ -337,6 +341,25 @@ class FigureWindow(tk.Toplevel):
                 _tklbl.set_fontsize(new_fs[2])
         fig.canvas.draw_idle()
 
+    def on_help_figure_controls(self):
+        """ Show the help messages for the controls.
+        """
+        msg_text = """* Diff mode: each trace - Ref.Φ, click ΔΦ button
+* Original mode: original trace, click Φ button
+
+Compute the reference phase (Ref.Φ) of each trace requires the input of time (T) range
+in the two entries, each is an integer as time in μs, put them in ascending
+order from left to right; then the time range is used to find the phase range to
+compute the average values as the references.
+
+The two values of T range are initialized with the first valid time (T1) and the 10th after
+it (T2). Note that for the raw dataset, the initial values are computed such that for all
+traces, at the assigned T1, phase values are all valid; otherwise, fall back to
+the first element of the time array."""
+        messagebox.showinfo(title="FigureWindow - Help",
+                message="Presenting Phase Traces: Diff & Original Modes",
+                detail=msg_text,
+                type=messagebox.OK)
 
 
 def _auto_scale_y(ax):
@@ -386,7 +409,6 @@ def configure_styles(root: tk.Tk, theme_name: str = "breeze"):
         logger.debug(f"Configure styles: adjust row height of treeview.")
         # root.style.configure("Treeview", font=(_monofontfamily, _monofontsize))
         # logger.debug(f"Configure styles: set treeview font to {_monofontfamily}, {_monofontsize}")
-
 
 
 if __name__ == "__main__":
