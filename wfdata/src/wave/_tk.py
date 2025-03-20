@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import numpy as np
 import tkinter as tk
-from functools import partial
-from tkinter import ttk
-
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+from functools import (
+    partial,
+    reduce
+)
+from tkinter import (
+    ttk,
+    messagebox
+)
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg,
+    NavigationToolbar2Tk
+)
 from matplotlib.text import Text
 
 from ._log import logger
@@ -61,15 +69,26 @@ class FigureWindow(tk.Toplevel):
         frame = ttk.LabelFrame(parent, text=title, borderwidth=1, relief=tk.GROOVE)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")
 
-        # tools: toolbar + controls
+        # tools frame:
+        # |toolbar | X-Axis |
+        # |phase   | Y-Axis |
+        # figure frame
+        # misc frame
         #
         tools_frame = ttk.Frame(frame)
-        tb_frame = ttk.Frame(tools_frame)
-        ctrl_frame = ttk.Frame(tools_frame)
-        #
         tools_frame.pack(fill=tk.X, padx=2, pady=2)
-        tb_frame.pack(side=tk.LEFT, expand=True, fill=tk.X)
-        ctrl_frame.pack(side=tk.RIGHT)
+        tools_frame.columnconfigure(0, weight=1)
+        tools_frame.columnconfigure(1, weight=0)
+
+        tb_frame = ttk.Frame(tools_frame)
+        xaxis_frame = ttk.Frame(tools_frame)
+        tb_frame.grid(row=0, column=0, sticky="ew")
+        xaxis_frame.grid(row=0, column=1, sticky="ew")
+        #
+        pha_frame = ttk.Frame(tools_frame)
+        yaxis_frame = ttk.Frame(tools_frame)
+        pha_frame.grid(row=1, column=0, sticky="ew")
+        yaxis_frame.grid(row=1, column=1, sticky="ew")
 
         # figure
         fig_frame = ttk.Frame(frame)
@@ -135,22 +154,17 @@ class FigureWindow(tk.Toplevel):
                 command=partial(self.on_toggle_legends, figure))
         legend_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
 
-        # --------------
-        # | ctrl_frame |
-        # --------------
-        # | sync-1,2,3 |
-        # | [i] -PHA[i]|  # each phase trace - i-th value to display the relative trend
-        sync_frame = ttk.Frame(ctrl_frame)
-        sync_frame.pack(side=tk.TOP)
-        pha_frame = ttk.Frame(ctrl_frame)
-        pha_frame.pack(side=tk.BOTTOM)
+        # phase frame (variables)
         ax_pha = None
-        self.pha0: list = []
+        # a list of np.ndarray/np.ma.MaskedArray of phase values
+        self.pha0: list[Union[np.ndarray, np.ma.MaskedArray]] = []
+        # time array of phase figure
+        self.pha0_t: np.ndarray = None
+
+        # xaxis frame
         i = 1
-        sync_frame_w = 0
-        sync_lbl = ttk.Label(sync_frame, text="↔", width=2)
+        sync_lbl = ttk.Label(xaxis_frame, text="Sync ↔")
         sync_lbl.pack(side=tk.LEFT, padx=1)
-        sync_frame_w += 2
         for ax in figure.get_axes():
             if ax.get_ylabel() == "NPERMIT":
                 continue
@@ -161,57 +175,105 @@ class FigureWindow(tk.Toplevel):
                 ax_pha = ax
                 ax_pha_ylabel0: str = ax.get_ylabel()
                 self.pha0 = [l.get_ydata() for l in ax.get_lines()]
-            sync_btn = ttk.Button(sync_frame, text=f"X{i}", width=3,
+                self.pha0_t = ax.get_lines()[0].get_xdata()
+                # print(type(self.pha0[0]), self.pha0[0][:100])
+            sync_btn = ttk.Button(xaxis_frame, text=f"X{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
             sync_btn.pack(side=tk.LEFT, padx=1)
-            sync_frame_w += 4
             i += 1
         # add a button to adjust auto scale Y limits
-        auto_y_btn = ttk.Button(sync_frame, text="↕", width=2,
+        auto_y_lbl = ttk.Label(yaxis_frame, text="Auto Y")
+        auto_y_btn = ttk.Button(yaxis_frame, text="↕", width=2,
                                 command=partial(on_auto_y, figure))
-        auto_y_btn.pack(side=tk.LEFT, padx=1)
-        sync_frame_w += 4
+        auto_y_lbl.pack(side=tk.LEFT, padx=1)
+        auto_y_btn.pack(side=tk.RIGHT, padx=1)
 
         # pha_frame
-        sub_pha_lbl = ttk.Label(pha_frame, text="Φ-idx", width=5)
-        sub_pha_txt = ttk.Entry(pha_frame, width=sync_frame_w + 1 - (5 + 2 + 3 + 4 * 1),
-                                justify=tk.CENTER)
-        sub_pha_txt.insert(0, "0")
-        self.sub_pha_txt = sub_pha_txt
+        sub_pha_lbl = ttk.Label(pha_frame, text="Ref.Φ from <T Range>:")
+        sub_pha_txt1 = ttk.Entry(pha_frame, justify=tk.CENTER, width=8)
+        self.sub_pha_txt1 = sub_pha_txt1
+        sub_pha_txt2 = ttk.Entry(pha_frame, justify=tk.CENTER, width=8)
+        self.sub_pha_txt2 = sub_pha_txt2
+        sub_pha_lbl_from = ttk.Label(pha_frame, text="From")
+        sub_pha_lbl_to = ttk.Label(pha_frame, text="To")
         reset_pha_btn = ttk.Button(pha_frame, text="Φ", width=2,
                                    command=partial(self.on_reset_pha, figure, ax_pha,
                                                    ax_pha_ylabel0))
         sub_pha_btn = ttk.Button(pha_frame, text=f"ΔΦ", width=3,
                                  command=partial(self.on_sub_pha, figure, ax_pha))
         #
-        sub_pha_lbl.pack(side=tk.LEFT, padx=1, pady=2)
-        sub_pha_txt.pack(side=tk.LEFT, padx=1, pady=2)
-        sub_pha_btn.pack(side=tk.LEFT, padx=1, pady=2)
-        reset_pha_btn.pack(side=tk.RIGHT, padx=1, pady=2)
+        sub_pha_lbl.pack(side=tk.LEFT, padx=2, pady=2)
+        sub_pha_lbl_from.pack(side=tk.LEFT, padx=2, pady=2)
+        sub_pha_txt1.pack(side=tk.LEFT, padx=2, pady=2)
+        sub_pha_lbl_to.pack(side=tk.LEFT, padx=2, pady=2)
+        sub_pha_txt2.pack(side=tk.LEFT, padx=2, pady=2)
+        sub_pha_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        reset_pha_btn.pack(side=tk.LEFT, padx=2, pady=2)
 
         # initialize
         lw_sbox.set(ax_pha.get_lines()[0].get_lw())
         fs_inc_sbox.set(0)
 
+        # initialize the t range
+        t_0 = self.find_first_valid_t()
+        sub_pha_txt1.insert(0, str(t_0))
+        sub_pha_txt2.insert(0, str(t_0 + 10))
+
+    def find_first_valid_t(self) -> int:
+        """ Find the first t value that corresponding phase values are all valid for all phase
+        traces.
+        """
+        t_0 = int(self.pha0_t[0])
+        if not isinstance(self.pha0[0], np.ma.MaskedArray):
+            # for opt data, just return the first T
+            return t_0
+        # otherwise, look for all traces
+        try:
+            idx = reduce(np.intersect1d, (np.where(~_arr.mask)[0] for _arr in self.pha0))
+            t_0 = int(self.pha0_t[int(idx[0])])
+            logger.debug(f"Found the common T where all phases are valid: {t_0}")
+        except Exception as e:
+            logger.error(f"Failed find the common T where all phases are valid: {e}")
+        finally:
+            return t_0
+
     def on_sub_pha(self, fig, ax):
         """ Subtract the PHA[i] for each trace, to show the relative waveform.
         """
-        s = self.sub_pha_txt.get()
+        s1 = self.sub_pha_txt1.get()
+        s2 = self.sub_pha_txt2.get()
         try:
-            idx = int(s)
+            t1 = int(s1)
+            t2 = int(s2)
         except ValueError as e:
-            msg = f"Invalid index of Phase waveform: {e}"
-            logger.error(msg)
+            msg = f"Invalid time(s) in integer for computing reference phase value: {e}"
+            logger.warning(msg)
             messagebox.showwarning(
                     title="Plot Self-diff Phases",
                     message=msg,
-                    detail="Input an integer >= 0 as the index to select the "
+                    detail="Input integers of Time range [t1:t2] to compute the average "
                            "reference phase value for each trace"
             )
         else:
-            logger.debug(f"Subtract PHA[{idx}] from each trace.")
+            # find the valid range of T
+            t_range_valid = np.intersect1d(range(t1, t2 + 1), self.pha0_t)
+            # find the indices in the original pha_t array
+            idx = np.where(np.in1d(self.pha0_t, t_range_valid))[0]
+            logger.info(f"Computing the average phase with PHA[{idx}]")
+
             for l, v in zip(ax.get_lines(), self.pha0):
-                l.set_ydata(v - v[idx])
+                # the average phase reads in the selected range
+                v0 = v[idx].mean()
+                if np.ma.is_masked(v0):
+                    msg = "The average phase readings in the selcted T range is --"
+                    logger.warning(msg)
+                    #messagebox.showwarning(
+                    #    title="Plot Self-diff Phases",
+                    #    message=msg,
+                    #    detail="Adjust the T range to cover at least one valid phase value."
+                    #)
+                logger.info(f"Subtracting {v0:>6.3f} from trace {l.get_label():>13s}")
+                l.set_ydata(v - v0)
             _auto_scale_y(ax)
             fs = ax.yaxis.label.get_fontsize()
             ax.set_ylabel("ΔΦ[$^o$] @ 80.5 MHz", fontsize=fs)
@@ -222,6 +284,7 @@ class FigureWindow(tk.Toplevel):
         """
         for l, v in zip(ax.get_lines(), self.pha0):
             l.set_ydata(v)
+            logger.info(f"Reset trace {l.get_label():>13s}")
         _auto_scale_y(ax)
         fs = ax.yaxis.label.get_fontsize()
         ax.set_ylabel(ylabel0, fontsize=fs)
