@@ -33,6 +33,7 @@ LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
 MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
 DEFAULT_INFO_STRING = f"DM-Wave Viewer v{_version}"
 RED_COLOR_HEX = "#E74C3C"
+BLUE_COLOR_HEX = "#3498DB"
 
 # data path cache: {id-o: path, id-r: path, ...}
 DATA_PATH_CACHE = {}
@@ -229,7 +230,7 @@ class MainWindow(tk.Tk):
         # trip info table
         if self.trip_info_file is not None:
             df_info = pd.read_hdf(self.trip_info_file)[
-                        ["ID", "devices", "t window", "threshold"]
+                        ["ID", "Energy", "devices", "t window", "threshold"]
                     ].rename(columns={
                         "ID": "Fault_ID",
                         "devices": "Devices",
@@ -392,34 +393,45 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
 
     def create_preview_panel(self):
         # right panel
+        # |- title
         # |- image label
-        # |- [fit][Copy]   [Plot Raw][Plot Opt]
+        # |- [Fit][Save]   [Plot Raw][Plot Opt]
         # |-               [Get Raw ][Get Opt ]
 
-        self.right_panel.rowconfigure(0, weight=1)
-        self.right_panel.rowconfigure(1, weight=0)
+        self.right_panel.rowconfigure(0, weight=0)
+        self.right_panel.rowconfigure(1, weight=1)
+        self.right_panel.rowconfigure(2, weight=0)
         self.right_panel.columnconfigure(0, weight=1)
-        # image
-        img_frame = ttk.Frame(self.right_panel)
-        img_frame.grid(row=0, column=0, sticky="nsew")
 
         _font = tk.font.nametofont("TkTextFont")
+        _font_family = _font.actual()['family']
+        _font_size = _font.actual()['size']
+        # title
+        title_frame = ttk.Frame(self.right_panel)
+        title_frame.grid(row=0, column=0, sticky="ew")
+        self.img_title_lbl = ttk.Label(title_frame, anchor=tk.CENTER,
+                                       font=(_font_family, int(_font_size * 1.5)))
+        self.img_title_lbl.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+        # image
+        img_frame = ttk.Frame(self.right_panel)
+        img_frame.grid(row=1, column=0, sticky="nsew")
+
         self.image_lbl = ttk.Label(img_frame, anchor=tk.CENTER,
-                                   font=(_font.actual()['family'],
-                                         int(_font.actual()['size'] * 1.5)))
+                                   font=(_font_family, int(_font_size * 1.4)))
         self.image_lbl.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         self.loaded_image_var = tk.StringVar()
         self.loaded_image_var.trace_add("write", self.update_preview)
         self.reset_loaded_image()
         self.preview_placehoder_image = create_image_placeholder()
-        # initial image label
-        self.image_lbl.config(text="Select an event to preview the image")
+        # initial image title label
+        self.img_title_lbl.config(text="Select an event to preview the image")
         # selected item (iid = ftid)
         self.selected_iid = None
 
         # control frame
         ctrl_frame = ttk.Frame(self.right_panel)
-        ctrl_frame.grid(row=1, column=0, sticky="ew", pady=5)
+        ctrl_frame.grid(row=2, column=0, sticky="ew", pady=5)
         #
         ctrl_frame1 = ttk.Frame(ctrl_frame)
         ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
@@ -629,8 +641,12 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.loaded_img_filepath = img_filepath
         if Path(img_filepath).is_file():
             self.loaded_image = Image.open(img_filepath)
+            self.img_title_lbl.config(text=f"Preview Event-{self.loaded_image_ftid}")
+            self.img_title_lbl.config(foreground=BLUE_COLOR_HEX)
         else:
             self.loaded_image = self.preview_placehoder_image
+            self.img_title_lbl.config(text=f"Preview Event-{self.loaded_image_ftid}")
+            self.img_title_lbl.config(foreground=RED_COLOR_HEX)
         self.loaded_image_tk = ImageTk.PhotoImage(self.loaded_image)
         self.image_lbl.config(image=self.loaded_image_tk)
         self.image_lbl.config(text=self.loaded_img_filepath)
@@ -685,6 +701,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         anchor_map = {
             "Fault_ID": tk.CENTER,
             "Power": tk.E,
+            "Energy": tk.CENTER,
             "Destination": tk.CENTER,
             "Devices": tk.CENTER,
         }
@@ -718,6 +735,11 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                 _tag = "n/a"
             else:
                 _tag = "valid"
+            ek0 = row.Energy
+            if pd.isna(ek0):
+                row.Energy = f"{'N/A':^13s}"
+            else:
+                row.Energy = f"{ek0:.3f} MeV/u"
             self.info_tree.insert("", tk.END, iid=i, values=row.to_list(), tags=(_tag, ))
 
     def refresh_table_data(self, filter: Union[str, None] = None):
