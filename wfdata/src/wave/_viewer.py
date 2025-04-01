@@ -6,10 +6,12 @@ try:
 except ImportError:
     matplotlib.use('Agg')
 
-import pandas as pd
+import multiprocessing
+import re
 import shutil
 import subprocess
 import sys
+import pandas as pd
 import platform
 import tkinter as tk
 from tkinter import (
@@ -130,21 +132,6 @@ class MainWindow(tk.Tk):
         """ Check if new versions are available, Windows only.
         if silent is set, do not pop up information messagebox if no updates available.
         """
-        import re
-        import tempfile
-
-        def _install(exefile: Path):
-            try:
-                tmp_dirpath = Path(tempfile.gettempdir())
-                tmp_exefile = tmp_dirpath.joinpath(exefile.name)
-                shutil.copy(exefile, tmp_exefile)
-                subprocess.call(f"{tmp_exefile} /i", shell=True)
-            except Exception as e:
-                logger.error("Error installing {exefile}: {e}")
-            finally:
-                if tmp_exefile.exists():
-                    tmp_exefile.unlink()
-
         pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
         if not pkg_dir.is_dir():
             logger.error("Cannot check new versions...")
@@ -163,8 +150,9 @@ class MainWindow(tk.Tk):
                         detail=f"Press YES to upgrade from {_version}."
                     )
                 if r == messagebox.YES:
-                    _install(latest_pkg_path)
-                return
+                    p = multiprocessing.Process(target=_install_app, args=(latest_pkg_path,))
+                    p.start()
+                    sys.exit(0)
         logger.info("No Updates Available.")
         if not silent:
             messagebox.showinfo(title="Checking for Updates",
@@ -827,6 +815,21 @@ def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Uni
     else:
         logger.debug(f"Saved {src_file_path} -> {dst_file_path}")
         return dst_file_path, None
+
+
+def _install_app(exefile: Path):
+    """ Install a new version of this app.
+    """
+    try:
+        tmp_dirpath = Path(tempfile.gettempdir())
+        tmp_exefile = tmp_dirpath.joinpath(exefile.name)
+        shutil.copy(exefile, tmp_exefile)
+        subprocess.call(f"{tmp_exefile} /i", shell=True)
+    except Exception as e:
+        logger.error("Error installing {exefile}: {e}")
+    finally:
+        if tmp_exefile.exists():
+            tmp_exefile.unlink()
 
 
 def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
