@@ -150,7 +150,9 @@ class MainWindow(tk.Tk):
                         detail=f"Press YES to upgrade from {_version}."
                     )
                 if r == messagebox.YES:
-                    p = multiprocessing.Process(target=_install_app, args=(latest_pkg_path,))
+                    p = multiprocessing.Process(
+                            target=_install_app, args=(latest_pkg_path,)
+                            daemon=True)
                     p.start()
                     sys.exit(0)
         logger.info("No Updates Available.")
