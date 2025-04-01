@@ -1,7 +1,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING .ISS SCRIPT FILES!
 
 #define MyAppName "DM-Wave"
-#define MyAppVersion "0.9.8"
+#define MyAppVersion "0.9.9"
 #define MyAppPublisher "FRIB, MSU"
 #define MyAppURL "https://stash.frib.msu.edu/projects/PHYAPP/repos/phantasy-apps"
 #define OutputName "DataManager-Wave"
@@ -34,7 +34,7 @@ Source: ".\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Run]
 // User selected... these files are shown for launch after everything is done
-Filename: "{app}\run-dm-app.bat"; WorkingDir: "{app}"; Description: Launch the viewer app for BCM/BPM waveform data; Flags: postinstall runascurrentuser skipifsilent;
+Filename: "{app}\run-dm-app.bat"; WorkingDir: "{app}"; Description: View BCM/BPM waveform data in DM-Wave; Flags: postinstall runascurrentuser skipifsilent;
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\run-dm-app.bat"; WorkingDir: "{app}"; Comment: "Launch {#MyAppName}"; IconFilename: "{app}\icon.ico"
