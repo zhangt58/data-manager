@@ -6,7 +6,6 @@ try:
 except ImportError:
     matplotlib.use('Agg')
 
-import multiprocessing
 import re
 import shutil
 import subprocess
@@ -150,11 +149,7 @@ class MainWindow(tk.Tk):
                         detail=f"Press YES to upgrade from {_version}."
                     )
                 if r == messagebox.YES:
-                    p = multiprocessing.Process(
-                            target=_install_app, args=(latest_pkg_path,)
-                            daemon=True)
-                    p.start()
-                    sys.exit(0)
+                    _install_app(latest_pkg_path)
         logger.info("No Updates Available.")
         if not silent:
             messagebox.showinfo(title="Checking for Updates",
