@@ -22,7 +22,7 @@ import io
 from pathlib import Path
 from functools import partial
 from typing import Union
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageTk
 
 from ._data import read_data as read_datafile
 from ._tk import configure_styles
@@ -41,7 +41,6 @@ _IS_WIN_PLATFORM = platform.system() == "Windows"
 # themes
 THEMES = ("adapta", "arc", "breeze", "vista", "default") if _IS_WIN_PLATFORM else \
          ("adapta", "arc", "breeze", "default")
-
 
 
 class MainWindow(tk.Tk):
@@ -409,12 +408,10 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                                    font=(_font.actual()['family'],
                                          int(_font.actual()['size'] * 1.5)))
         self.image_lbl.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-        self.loaded_image = None  # the loaded image from a png file.
-        self.loaded_image_tk = None  # the image put into a tk label.
-        self.loaded_img_filepath = None
-        self.loaded_image_ftid = None
         self.loaded_image_var = tk.StringVar()
         self.loaded_image_var.trace_add("write", self.update_preview)
+        self.reset_loaded_image()
+        self.preview_placehoder_image = create_image_placeholder()
         # initial image label
         self.image_lbl.config(text="Select an event to preview the image")
         # selected item (iid = ftid)
@@ -436,6 +433,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         save_img_btn = ttk.Button(ctrl_frame1, text="Save", command=self.on_save_image,
                                   width=5)
         save_img_btn.pack(side=tk.LEFT, padx=5)
+        self.save_img_btn = save_img_btn
         # plot
         open_btn = ttk.Button(ctrl_frame1, text="Plot Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=5)
@@ -627,8 +625,12 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         return None
 
     def update_preview(self, *args):
-        self.loaded_img_filepath = img_filepath = self.loaded_image_var.get()
-        self.loaded_image = Image.open(img_filepath)
+        img_filepath = self.loaded_image_var.get()
+        self.loaded_img_filepath = img_filepath
+        if Path(img_filepath).is_file():
+            self.loaded_image = Image.open(img_filepath)
+        else:
+            self.loaded_image = self.preview_placehoder_image
         self.loaded_image_tk = ImageTk.PhotoImage(self.loaded_image)
         self.image_lbl.config(image=self.loaded_image_tk)
         self.image_lbl.config(text=self.loaded_img_filepath)
@@ -637,17 +639,26 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
     def display_figure(self, row):
         ftid: int = int(row[0])
         img_filepath = self.find_image_path(ftid)
+        self.loaded_image_ftid = ftid
+        self.preview_info_var.set(f"Preview: Event-{ftid}")
         if img_filepath is not None:
-            self.loaded_image_ftid = ftid
             self.loaded_image_var.set(str(img_filepath))
-            self.preview_info_var.set(f"Preview: Event-{ftid}")
             self.info_var.set(DEFAULT_INFO_STRING)
             self.info_lbl.config(foreground=self.lbl_sty_fg)
+            self.save_img_btn.config(state="enabled")
         else:
             msg = f"No image found for ID {ftid}"
             logger.warning(msg)
             self.set_var(self.info_var, msg, DEFAULT_INFO_STRING, self.info_lbl,
                          RED_COLOR_HEX, self.lbl_sty_fg)
+            self.loaded_image_var.set(f"_IMG-NOT-FOUND_;{ftid}")
+            self.save_img_btn.config(state="disabled")
+
+    def reset_loaded_image(self):
+        self.loaded_image = None  # the loaded image from a png file.
+        self.loaded_image_tk = None  # the image put into a tk label.
+        self.loaded_img_filepath = None
+        self.loaded_image_ftid = None
 
     def place_table(self, parent_frame, headers: list[str],
                     xscroll_on: bool = True, yscroll_on: bool = True,
@@ -715,6 +726,14 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.data, self.data_info = self.read_data(filter)
         self.tree.delete(*self.tree.get_children())
         self.present_main_data()
+
+
+def create_image_placeholder(w: int = 1440, h: int = 900, lw: int = 1):
+    img = Image.new("RGB", (w, h), (236, 240, 241))
+    draw = ImageDraw.Draw(img)
+    draw.line((5, 5, w - 5, h - 5), fill=(127, 140, 141), width=lw)
+    draw.line((w - 5, 5, 5, h - 5), fill=(127, 140, 141), width=lw)
+    return img
 
 
 def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Union[str, None]]:
