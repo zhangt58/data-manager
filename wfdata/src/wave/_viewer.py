@@ -230,7 +230,7 @@ class MainWindow(tk.Tk):
         # trip info table
         if self.trip_info_file is not None:
             df_info = pd.read_hdf(self.trip_info_file)[
-                        ["ID", "devices", "t window", "threshold"]
+                        ["ID", "Energy", "devices", "t window", "threshold"]
                     ].rename(columns={
                         "ID": "Fault_ID",
                         "devices": "Devices",
@@ -701,6 +701,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         anchor_map = {
             "Fault_ID": tk.CENTER,
             "Power": tk.E,
+            "Energy": tk.CENTER,
             "Destination": tk.CENTER,
             "Devices": tk.CENTER,
         }
@@ -734,6 +735,11 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                 _tag = "n/a"
             else:
                 _tag = "valid"
+            ek0 = row.Energy
+            if pd.isna(ek0):
+                row.Energy = f"{'N/A':^13s}"
+            else:
+                row.Energy = f"{ek0:.3f} MeV/u"
             self.info_tree.insert("", tk.END, iid=i, values=row.to_list(), tags=(_tag, ))
 
     def refresh_table_data(self, filter: Union[str, None] = None):
