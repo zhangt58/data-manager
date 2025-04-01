@@ -826,7 +826,7 @@ def _install_app(exefile: Path):
         tmp_dirpath = Path(tempfile.gettempdir())
         tmp_exefile = tmp_dirpath.joinpath(exefile.name)
         shutil.copy(exefile, tmp_exefile)
-        subprocess.call(f"{tmp_exefile} /i", shell=True)
+        subprocess.Popen(f"{tmp_exefile} /i", shell=True)
     except Exception as e:
         logger.error("Error installing {exefile}: {e}")
     finally:
