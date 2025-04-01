@@ -136,10 +136,13 @@ jobs:
         Compress-Archive -Path .\dm-wave -DestinationPath ..\${{ steps.set_pkgname.outputs.name }}.zip
 
     - name: Create Inno Setup Installer
-      uses: Minionguyjpro/Inno-Setup-Action@v1.2.5
+      uses: nadeemjazmawe/inno-setup-action-cli@v6.0.5
       with:
-        path: .\wfdata\pkg\win\setup.iss
-        options: /O+
+        filepath: .\wfdata\pkg\win\setup.iss
+      # uses: Minionguyjpro/Inno-Setup-Action@v1.2.5
+      # with:
+      #  path: .\wfdata\pkg\win\setup.iss
+      #  options: /O+
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
