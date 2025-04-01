@@ -728,7 +728,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.present_main_data()
 
 
-def create_image_placeholder(w: int = 600, h: int = 400, lw: int = 1):
+def create_image_placeholder(w: int = 1440, h: int = 900, lw: int = 1):
     img = Image.new("RGB", (w, h), (236, 240, 241))
     draw = ImageDraw.Draw(img)
     draw.line((5, 5, w - 5, h - 5), fill=(127, 140, 141), width=lw)
