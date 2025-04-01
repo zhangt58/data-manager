@@ -175,7 +175,10 @@ class FigureWindow(tk.Toplevel):
                 ax_pha = ax
                 ax_pha_ylabel0: str = ax.get_ylabel()
                 self.pha0 = [l.get_ydata() for l in ax.get_lines()]
-                self.pha0_t = ax.get_lines()[0].get_xdata()
+                if len(ax.get_lines()) != 0:
+                    self.pha0_t = ax.get_lines()[0].get_xdata()
+                else:
+                    self.pha0_t = None
                 # print(type(self.pha0[0]), self.pha0[0][:100])
             sync_btn = ttk.Button(xaxis_frame, text=f"{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
@@ -215,7 +218,10 @@ class FigureWindow(tk.Toplevel):
         help_btn.pack(side=tk.RIGHT, padx=2, pady=2)
 
         # initialize
-        lw_sbox.set(ax_pha.get_lines()[0].get_lw())
+        try:
+            lw_sbox.set(ax_pha.get_lines()[0].get_lw())
+        except:
+            lw_sbox.set(1)
         fs_inc_sbox.set(0)
 
         # initialize the t range
@@ -227,6 +233,8 @@ class FigureWindow(tk.Toplevel):
         """ Find the first t value that corresponding phase values are all valid for all phase
         traces.
         """
+        if self.pha0_t is None:
+            return 0
         t_0 = int(self.pha0_t[0])
         if not isinstance(self.pha0[0], np.ma.MaskedArray):
             # for opt data, just return the first T

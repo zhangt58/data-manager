@@ -221,7 +221,7 @@ class MainWindow(tk.Tk):
         # filter the "T Window" column: 150us
         """
         # main event table
-        df = pd.read_csv(self.csv_file, delimiter=";")
+        df = pd.read_csv(self.csv_file, delimiter=";").drop_duplicates(subset=['Fault_ID'])
         # trip info table
         if self.trip_info_file is not None:
             df_info = pd.read_hdf(self.trip_info_file)[
