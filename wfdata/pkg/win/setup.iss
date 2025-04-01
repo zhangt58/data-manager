@@ -23,6 +23,7 @@ WizardStyle=modern
 OutputDir=.\output
 OutputBaseFilename={#OutputName}_{#MyAppVersion}
 SetupIconFile=.\icon.ico
+CloseApplications=force
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
