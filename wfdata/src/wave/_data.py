@@ -67,7 +67,7 @@ def _process_format_v1(store):
         for bcm_grp in bcm_grps:
             # print(f"{bcm_grp}: {df_grp[bcm_grp]}")
             if any(i not in df_bcm for i in df_grp[bcm_grp]):
-                logger.error(f"Missing data: {df_grp[bcm_grp]} in {store.filename}")
+                logger.warning(f"Missing data: {df_grp[bcm_grp]} in {store.filename}")
                 continue
             _bcm_df = df_bcm[df_grp[bcm_grp]]
             _t_idx = pd.date_range(start=df_t0[bcm_grp], periods=_bcm_df.shape[0], freq='us')
@@ -81,7 +81,11 @@ def _process_format_v1(store):
     bpm_dfs = []
     try:
         for bpm_grp in bpm_grps:
-            # print(f"{bpm_grp} T0: {df_t0[bpm_grp]}")
+            # print(f"{bpm_grp}: {df_grp[bpm_grp]}")
+            if any(i not in df_bpm for i in df_grp[bpm_grp]):
+                logger.warning(f"Missing data: {df_grp[bpm_grp]} in {store.filename}")
+                bpm_grps = bpm_grps.drop(bpm_grp)
+                continue
             _bpm_df = df_bpm[df_grp[bpm_grp]]
             _t_idx = pd.date_range(start=df_t0[bpm_grp], periods=_bpm_df.shape[0], freq='us')
             bpm_dfs.append(_bpm_df.set_index(_t_idx))
