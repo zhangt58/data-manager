@@ -8,6 +8,7 @@ set WFDATA_DIR="I:\analysis\linac-data\wfdata"
 %DM_WAVE_CMD% view %WFDATA_DIR%\raw\MPS-faults.csv ^
     %WFDATA_DIR%\final\images ^
     --trip-info-file %WFDATA_DIR%\raw\trip-info.h5 ^
+    --event-filter-file %WFDATA_DIR%\raw\type-filters.txt ^
     --data-dir %WFDATA_DIR%\final\opt ^
     --data-dir %WFDATA_DIR%\final\merged ^
     --data-dir %WFDATA_DIR%\raw\raw ^
