@@ -1,7 +1,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING .ISS SCRIPT FILES!
 
 #define MyAppName "DM-Wave"
-#define MyAppVersion "0.9.9-1"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "FRIB, MSU"
 #define MyAppURL "https://stash.frib.msu.edu/projects/PHYAPP/repos/phantasy-apps"
 #define OutputName "DataManager-Wave"
