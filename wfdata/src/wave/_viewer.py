@@ -6,10 +6,11 @@ try:
 except ImportError:
     matplotlib.use('Agg')
 
-import pandas as pd
+import re
 import shutil
 import subprocess
 import sys
+import pandas as pd
 import platform
 import tkinter as tk
 from tkinter import (
@@ -22,7 +23,7 @@ import io
 from pathlib import Path
 from functools import partial
 from typing import Union
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageTk
 
 from ._data import read_data as read_datafile
 from ._tk import configure_styles
@@ -33,6 +34,7 @@ LOWER_LEFT_CORNER = u"\N{BOX DRAWINGS LIGHT UP AND RIGHT}"
 MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
 DEFAULT_INFO_STRING = f"DM-Wave Viewer v{_version}"
 RED_COLOR_HEX = "#E74C3C"
+BLUE_COLOR_HEX = "#3498DB"
 
 # data path cache: {id-o: path, id-r: path, ...}
 DATA_PATH_CACHE = {}
@@ -41,7 +43,6 @@ _IS_WIN_PLATFORM = platform.system() == "Windows"
 # themes
 THEMES = ("adapta", "arc", "breeze", "vista", "default") if _IS_WIN_PLATFORM else \
          ("adapta", "arc", "breeze", "default")
-
 
 
 class MainWindow(tk.Tk):
@@ -130,21 +131,6 @@ class MainWindow(tk.Tk):
         """ Check if new versions are available, Windows only.
         if silent is set, do not pop up information messagebox if no updates available.
         """
-        import re
-        import tempfile
-
-        def _install(exefile: Path):
-            try:
-                tmp_dirpath = Path(tempfile.gettempdir())
-                tmp_exefile = tmp_dirpath.joinpath(exefile.name)
-                shutil.copy(exefile, tmp_exefile)
-                subprocess.call(f"{tmp_exefile} /i", shell=True)
-            except Exception as e:
-                logger.error("Error installing {exefile}: {e}")
-            finally:
-                if tmp_exefile.exists():
-                    tmp_exefile.unlink()
-
         pkg_dir = Path("I:/analysis/linac-data/wfdata/tools")
         if not pkg_dir.is_dir():
             logger.error("Cannot check new versions...")
@@ -163,7 +149,7 @@ class MainWindow(tk.Tk):
                         detail=f"Press YES to upgrade from {_version}."
                     )
                 if r == messagebox.YES:
-                    _install(latest_pkg_path)
+                    _install_app(latest_pkg_path)
                 return
         logger.info("No Updates Available.")
         if not silent:
@@ -230,7 +216,7 @@ class MainWindow(tk.Tk):
         # trip info table
         if self.trip_info_file is not None:
             df_info = pd.read_hdf(self.trip_info_file)[
-                        ["ID", "devices", "t window", "threshold"]
+                        ["ID", "Energy", "devices", "t window", "threshold"]
                     ].rename(columns={
                         "ID": "Fault_ID",
                         "devices": "Devices",
@@ -393,36 +379,45 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
 
     def create_preview_panel(self):
         # right panel
+        # |- title
         # |- image label
-        # |- [fit][Copy]   [Plot Raw][Plot Opt]
+        # |- [Fit][Save]   [Plot Raw][Plot Opt]
         # |-               [Get Raw ][Get Opt ]
 
-        self.right_panel.rowconfigure(0, weight=1)
-        self.right_panel.rowconfigure(1, weight=0)
+        self.right_panel.rowconfigure(0, weight=0)
+        self.right_panel.rowconfigure(1, weight=1)
+        self.right_panel.rowconfigure(2, weight=0)
         self.right_panel.columnconfigure(0, weight=1)
-        # image
-        img_frame = ttk.Frame(self.right_panel)
-        img_frame.grid(row=0, column=0, sticky="nsew")
 
         _font = tk.font.nametofont("TkTextFont")
+        _font_family = _font.actual()['family']
+        _font_size = _font.actual()['size']
+        # title
+        title_frame = ttk.Frame(self.right_panel)
+        title_frame.grid(row=0, column=0, sticky="ew")
+        self.img_title_lbl = ttk.Label(title_frame, anchor=tk.CENTER,
+                                       font=(_font_family, int(_font_size * 1.5)))
+        self.img_title_lbl.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+        # image
+        img_frame = ttk.Frame(self.right_panel)
+        img_frame.grid(row=1, column=0, sticky="nsew")
+
         self.image_lbl = ttk.Label(img_frame, anchor=tk.CENTER,
-                                   font=(_font.actual()['family'],
-                                         int(_font.actual()['size'] * 1.5)))
+                                   font=(_font_family, int(_font_size * 1.4)))
         self.image_lbl.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-        self.loaded_image = None  # the loaded image from a png file.
-        self.loaded_image_tk = None  # the image put into a tk label.
-        self.loaded_img_filepath = None
-        self.loaded_image_ftid = None
         self.loaded_image_var = tk.StringVar()
         self.loaded_image_var.trace_add("write", self.update_preview)
-        # initial image label
-        self.image_lbl.config(text="Select an event to preview the image")
+        self.reset_loaded_image()
+        self.preview_placehoder_image = create_image_placeholder()
+        # initial image title label
+        self.img_title_lbl.config(text="Select an event to preview the image")
         # selected item (iid = ftid)
         self.selected_iid = None
 
         # control frame
         ctrl_frame = ttk.Frame(self.right_panel)
-        ctrl_frame.grid(row=1, column=0, sticky="ew", pady=5)
+        ctrl_frame.grid(row=2, column=0, sticky="ew", pady=5)
         #
         ctrl_frame1 = ttk.Frame(ctrl_frame)
         ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
@@ -436,6 +431,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         save_img_btn = ttk.Button(ctrl_frame1, text="Save", command=self.on_save_image,
                                   width=5)
         save_img_btn.pack(side=tk.LEFT, padx=5)
+        self.save_img_btn = save_img_btn
         # plot
         open_btn = ttk.Button(ctrl_frame1, text="Plot Opt", command=partial(self.on_open, True))
         open_btn.pack(side=tk.RIGHT, padx=5)
@@ -627,8 +623,16 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         return None
 
     def update_preview(self, *args):
-        self.loaded_img_filepath = img_filepath = self.loaded_image_var.get()
-        self.loaded_image = Image.open(img_filepath)
+        img_filepath = self.loaded_image_var.get()
+        self.loaded_img_filepath = img_filepath
+        if Path(img_filepath).is_file():
+            self.loaded_image = Image.open(img_filepath)
+            self.img_title_lbl.config(text=f"Preview Event-{self.loaded_image_ftid}")
+            self.img_title_lbl.config(foreground=BLUE_COLOR_HEX)
+        else:
+            self.loaded_image = self.preview_placehoder_image
+            self.img_title_lbl.config(text=f"Preview Event-{self.loaded_image_ftid}")
+            self.img_title_lbl.config(foreground=RED_COLOR_HEX)
         self.loaded_image_tk = ImageTk.PhotoImage(self.loaded_image)
         self.image_lbl.config(image=self.loaded_image_tk)
         self.image_lbl.config(text=self.loaded_img_filepath)
@@ -637,17 +641,26 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
     def display_figure(self, row):
         ftid: int = int(row[0])
         img_filepath = self.find_image_path(ftid)
+        self.loaded_image_ftid = ftid
+        self.preview_info_var.set(f"Preview: Event-{ftid}")
         if img_filepath is not None:
-            self.loaded_image_ftid = ftid
             self.loaded_image_var.set(str(img_filepath))
-            self.preview_info_var.set(f"Preview: Event-{ftid}")
             self.info_var.set(DEFAULT_INFO_STRING)
             self.info_lbl.config(foreground=self.lbl_sty_fg)
+            self.save_img_btn.config(state="enabled")
         else:
             msg = f"No image found for ID {ftid}"
             logger.warning(msg)
             self.set_var(self.info_var, msg, DEFAULT_INFO_STRING, self.info_lbl,
                          RED_COLOR_HEX, self.lbl_sty_fg)
+            self.loaded_image_var.set(f"_IMG-NOT-FOUND_;{ftid}")
+            self.save_img_btn.config(state="disabled")
+
+    def reset_loaded_image(self):
+        self.loaded_image = None  # the loaded image from a png file.
+        self.loaded_image_tk = None  # the image put into a tk label.
+        self.loaded_img_filepath = None
+        self.loaded_image_ftid = None
 
     def place_table(self, parent_frame, headers: list[str],
                     xscroll_on: bool = True, yscroll_on: bool = True,
@@ -674,6 +687,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         anchor_map = {
             "Fault_ID": tk.CENTER,
             "Power": tk.E,
+            "Energy": tk.CENTER,
             "Destination": tk.CENTER,
             "Devices": tk.CENTER,
         }
@@ -707,6 +721,11 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                 _tag = "n/a"
             else:
                 _tag = "valid"
+            ek0 = row.Energy
+            if pd.isna(ek0):
+                row.Energy = f"{'N/A':^13s}"
+            else:
+                row.Energy = f"{ek0:.3f} MeV/u"
             self.info_tree.insert("", tk.END, iid=i, values=row.to_list(), tags=(_tag, ))
 
     def refresh_table_data(self, filter: Union[str, None] = None):
@@ -715,6 +734,14 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         self.data, self.data_info = self.read_data(filter)
         self.tree.delete(*self.tree.get_children())
         self.present_main_data()
+
+
+def create_image_placeholder(w: int = 1440, h: int = 900, lw: int = 1):
+    img = Image.new("RGB", (w, h), (236, 240, 241))
+    draw = ImageDraw.Draw(img)
+    draw.line((5, 5, w - 5, h - 5), fill=(127, 140, 141), width=lw)
+    draw.line((w - 5, 5, 5, h - 5), fill=(127, 140, 141), width=lw)
+    return img
 
 
 def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Union[str, None]]:
@@ -786,6 +813,23 @@ def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Uni
     else:
         logger.debug(f"Saved {src_file_path} -> {dst_file_path}")
         return dst_file_path, None
+
+
+def _install_app(exefile: Path):
+    """ Install a new version of this app.
+    """
+    import tempfile
+
+    try:
+        tmp_dirpath = Path(tempfile.gettempdir())
+        tmp_exefile = tmp_dirpath.joinpath(exefile.name)
+        shutil.copy(exefile, tmp_exefile)
+        subprocess.Popen(
+            f"{tmp_exefile} /CLOSEAPPLICATIONS", shell=True,
+            creationflags=subprocess.CREATE_NEW_CONSOLE,
+        )
+    except Exception as e:
+        logger.error(f"Error installing {exefile}: {e}")
 
 
 def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],

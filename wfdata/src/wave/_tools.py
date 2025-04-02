@@ -332,6 +332,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         for data_filepath in args.data_filepath[:n_figs]:
             _pth = Path(data_filepath)
             fig = create_plot(_pth, args.is_opt, t_range)
+            if fig is None:
+                continue
             fig.canvas.manager.set_window_title(f"Figure {_pth.name}")
             fig.tight_layout()
             fig_with_titles.append((fig, _pth.name))
@@ -461,6 +463,8 @@ def create_plot(data_filepath: Path, is_opt: bool = False,
     """ Create the matplotlib figure object.
     """
     df, t0_s = read_data(data_filepath, t_range, is_opt)
+    if df is None:
+        return None
     return plot(df, t0_s, data_filepath.name)
 
 
