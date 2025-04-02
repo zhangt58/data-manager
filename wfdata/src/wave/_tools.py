@@ -383,6 +383,8 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="The directory path of the processed images.")
     parser.add_argument("--trip-info-file", dest="trip_info_file", type=str,
                         help="The .h5 file for the MPS MTCA trip info.")
+    parser.add_argument("--event-filter-file", dest="event_filter_file", type=str,
+                        help="Exclude the defined MPS fault events by type, one Type per line.")
     parser.add_argument("--data-dir", action="append", dest="data_dirs",
                         help="The directory path for either the optimized, merged or raw data files.")
     parser.add_argument("--log-level", dest="log_level", type=str, default="INFO",
@@ -409,7 +411,8 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
     if args.mps_faults_file is None or args.images_dir is None:
         logger.error("MPS faults file and image directory must be defined.")
         sys.exit(1)
-    run_viewer(args.mps_faults_file, args.trip_info_file, args.images_dir, args.data_dirs,
+    run_viewer(args.mps_faults_file, args.trip_info_file, args.event_filter_file,
+               args.images_dir, args.data_dirs,
                args.geometry, args.fig_dpi, args.theme_name,
                args.icon_path, **args.col_widths)
 

@@ -47,8 +47,8 @@ THEMES = ("adapta", "arc", "breeze", "vista", "default") if _IS_WIN_PLATFORM els
 
 class MainWindow(tk.Tk):
 
-    def __init__(self, csv_file: str, trip_info_file: str, imags_dir: str,
-                 data_dirs: list[str], fig_dpi: Union[int, None] = None,
+    def __init__(self, csv_file: str, trip_info_file: str, event_filter_file: str,
+                 imags_dir: str, data_dirs: list[str], fig_dpi: Union[int, None] = None,
                  theme_name: str = "arc", icon_path: Union[str, None] = None,
                  column_widths: dict = None):
         super().__init__()
@@ -79,6 +79,12 @@ class MainWindow(tk.Tk):
         self.screen_height = self.winfo_screenheight()
 
         # read the data for the table
+        if event_filter_file is not None:
+            self.event_filter_filepath = Path(event_filter_file)
+            logger.info(f"Reading event type filters from {self.event_filter_filepath}")
+        else:
+            self.event_filter_filepath = None
+        #
         self.csv_file = csv_file
         self.trip_info_file = trip_info_file
         self.data, self.data_info = self.read_data()
@@ -211,8 +217,13 @@ class MainWindow(tk.Tk):
         # filter the "Description" column: MTCA06
         # filter the "T Window" column: 150us
         """
+        evt_typ_filters = _read_evt_typ_filter(self.event_filter_filepath)
         # main event table
         df = pd.read_csv(self.csv_file, delimiter=";").drop_duplicates(subset=['Fault_ID'])
+        if evt_typ_filters is not None:
+            n_excl = df[df.Type.isin(evt_typ_filters)].shape[0]
+            logger.info(f"Exclude {n_excl} MPS events of type: {evt_typ_filters}")
+            df = df[~df.Type.isin(evt_typ_filters)]
         # trip info table
         if self.trip_info_file is not None:
             df_info = pd.read_hdf(self.trip_info_file)[
@@ -832,10 +843,28 @@ def _install_app(exefile: Path):
         logger.error(f"Error installing {exefile}: {e}")
 
 
-def main(mps_faults_path: str, trip_info_file: str, images_dir: str, data_dirs: list[str],
-         geometry: str = "1600x1200", fig_dpi: Union[int, None] = None, theme_name: str = "arc",
+def _read_evt_typ_filter(filepath: Path) -> Union[None, list[str]]:
+    """ Read the event Type filters.
+    """
+    if not filepath.is_file():
+        return None
+    #
+    filters = []
+    for line in open(filepath, 'r'):
+        if line.startswith("#"):
+            continue
+        s = line.strip()
+        if s and s not in filters:
+            filters.append(s)
+    return filters
+
+
+def main(mps_faults_path: str, trip_info_file: str, event_filter_file: str,
+         images_dir: str, data_dirs: list[str], geometry: str = "1600x1200",
+         fig_dpi: Union[int, None] = None, theme_name: str = "arc",
          icon_path: Union[str, None] = None, **kws):
-    app = MainWindow(mps_faults_path, trip_info_file, images_dir, data_dirs, fig_dpi,
+    app = MainWindow(mps_faults_path, trip_info_file, event_filter_file,
+                     images_dir, data_dirs, fig_dpi,
                      theme_name, icon_path, column_widths=kws)
     app.geometry(geometry)
     w, h = geometry.split("x")
