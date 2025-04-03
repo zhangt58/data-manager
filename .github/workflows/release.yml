@@ -14,13 +14,17 @@ jobs:
   publish-to-gitlab:
     name: Publish a New Release to MSU Gitlab
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'release' &&
+      github.event.action == 'released' &&
+      github.event.workflow_run.conclusion == 'success'
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-      
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
