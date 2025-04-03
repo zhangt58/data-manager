@@ -1,12 +1,9 @@
 name: Build Packages
 
 on:
-  push:
-    tags:
-      - 'v*'
   release:
       types:
-        - published
+        - created
 
 jobs:
   win-build:
@@ -30,8 +27,8 @@ jobs:
       id: pkginfo
       shell: bash
       run: |
-        # Extract the version from the Git tag (e.g., v1.0.0 -> 1.0.0)
-        ver=${GITHUB_REF#refs/tags/v}
+        # Extract the version from setup.py
+        grep 'version' setup.py | awk -F'=' '{print $2}' | awk -F"'" '{print $2}' >> $GITHUB_OUTPUT
         echo "pkg_version=${ver}" >> $GITHUB_OUTPUT
         echo "pkg_name=DataManager-Wave_${ver}.exe" >> $GITHUB_OUTPUT
 
@@ -82,7 +79,7 @@ jobs:
         path: .\wfdata\pkg\win\output\${{ steps.pkginfo.outputs.pkg_name }}
         retention-days: 1
 
-  release:
+  Release:
     needs: win-build
     runs-on: ubuntu-latest
     steps:
