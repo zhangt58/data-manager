@@ -1,6 +1,11 @@
-name: Publish Artifacts to Gitlab (MSU)
+name: Publish Artifacts
 
 on:
+  workflow_run:
+    workflows:
+      - Build Packages
+    types:
+      - completed
   release:
     types:
       - released
