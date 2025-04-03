@@ -28,7 +28,7 @@ jobs:
       shell: bash
       run: |
         # Extract the version from setup.py
-        grep 'version' setup.py | awk -F'=' '{print $2}' | awk -F"," '{print $1}' >> $GITHUB_OUTPUT
+        ver=$(grep 'version' setup.py | awk -F'=' '{print $2}' | tr -d "',\"")  # 1.0.0
         echo "pkg_version=${ver}" >> $GITHUB_OUTPUT
         echo "pkg_name=DataManager-Wave_${ver}.exe" >> $GITHUB_OUTPUT
 
