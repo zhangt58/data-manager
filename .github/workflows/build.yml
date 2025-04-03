@@ -70,6 +70,12 @@ jobs:
           --noconfirm --clean --icon ./icons/icon.ico `
           --distpath .\dist
 
+    - name: Update Inno Setup ISS
+      shell: bash
+      run: |
+        cd ./pkg/win
+        sed -i "/define MyAppVersion/s/.*/#define MyAppVersion \"${{ steps.pkginfo.outputs.pkg_version }}\"/" setup.iss
+
     - name: Create Inno Setup Installer
       uses: nadeemjazmawe/inno-setup-action-cli@v6.0.5
       with:
