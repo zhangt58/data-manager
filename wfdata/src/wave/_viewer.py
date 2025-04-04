@@ -19,7 +19,6 @@ from tkinter import (
     messagebox,
     scrolledtext,
 )
-import io
 from pathlib import Path
 from functools import partial
 from typing import Union
@@ -92,7 +91,7 @@ class MainWindow(tk.Tk):
         self.images_dirpath = Path(imags_dir)
         self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
         self.column_widths = {} if column_widths is None else column_widths
-        self.fig_dpi= fig_dpi
+        self.fig_dpi = fig_dpi
 
         # info for faults table panel
         self.info_var = tk.StringVar()
@@ -150,7 +149,8 @@ class MainWindow(tk.Tk):
             latest_pkg_ver = v.group(1)
             if latest_pkg_ver > _version:
                 logger.info(f"New version {latest_pkg_ver} is available!")
-                r = messagebox.askquestion(title="Checking for Updates",
+                r = messagebox.askquestion(
+                        title="Checking for Updates",
                         message=f"DataManager-Wave {latest_pkg_ver} is available!",
                         detail=f"Press YES to upgrade from {_version}."
                     )
@@ -159,7 +159,8 @@ class MainWindow(tk.Tk):
                 return
         logger.info("No Updates Available.")
         if not silent:
-            messagebox.showinfo(title="Checking for Updates",
+            messagebox.showinfo(
+                title="Checking for Updates",
                 message="No Updates Available.",
             )
 
@@ -171,8 +172,9 @@ class MainWindow(tk.Tk):
             webbrowser.open("https://wikihost.frib.msu.edu/AcceleratorPhysics/doku.php?id=data:linacdata")
 
         def on_exit():
-            r = messagebox.askquestion(title="Exit DM-Wave",
-                    message=f"Are you sure to close DM-Wave?",
+            r = messagebox.askquestion(
+                    title="Exit DM-Wave",
+                    message="Are you sure to close DM-Wave?",
                 )
             if r == messagebox.YES:
                 self.destroy()
@@ -201,16 +203,16 @@ class MainWindow(tk.Tk):
             help_menu.add_command(label="Check for Updates",
                                   command=partial(self.on_check_updates, False))
         help_menu.add_command(label="About", accelerator="Ctrl+A",
-                              command=lambda:self.on_about(self))
+                              command=lambda: self.on_about(self))
         #
         menu_bar.add_cascade(label="File", menu=file_menu)
         menu_bar.add_cascade(label="View", menu=view_menu)
         menu_bar.add_cascade(label="Help", menu=help_menu)
         #
         self.config(menu=menu_bar)
-        self.bind("<Control-q>", lambda e:on_exit())
-        self.bind("<Control-a>", lambda e:self.on_about(self))
-        self.bind("<F1>",lambda e:on_help())
+        self.bind("<Control-q>", lambda e: on_exit())
+        self.bind("<Control-a>", lambda e: self.on_about(self))
+        self.bind("<F1>", lambda e: on_help())
 
     def read_data(self, filter: Union[str, None] = None) -> tuple[pd.DataFrame, Union[pd.DataFrame, None]]:
         """ Read a list or rows data from *csv_file*.
@@ -238,7 +240,7 @@ class MainWindow(tk.Tk):
             df_info = None
         # filter main
         if filter == "MTCA06":
-            df = df[df["Description"]=="MTCA06"].reset_index(drop=True)
+            df = df[df["Description"] == "MTCA06"].reset_index(drop=True)
         # filter info
         if filter == "150us":
             if df_info is None:
@@ -263,6 +265,7 @@ class MainWindow(tk.Tk):
         """
         var_obj.set(new_val)
         linked_obj.config(foreground=new_fg)
+
         def _reset():
             var_obj.set(default_val)
             linked_obj.config(foreground=default_fg)
@@ -330,7 +333,7 @@ class MainWindow(tk.Tk):
         reload_mtca_btn.pack(side=tk.LEFT, padx=5)
         # T Window has 150us (need --trip-info-file)
         reload_fast_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 150{MU_GREEK}s",
-                                          command=partial(self.on_reload, f"150us"))
+                                          command=partial(self.on_reload, "150us"))
         reload_fast_trip_btn.pack(side=tk.LEFT, padx=5)
         #
         # Event on preview
@@ -373,7 +376,6 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
 
         close_button = ttk.Button(frame, text="Close", command=about_dialog.destroy)
         close_button.pack(pady=5)
-
 
         # position on top of the middle of the main
         w0, h0 = 600, 400
@@ -705,7 +707,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         anchor_default = tk.W
         for i, header in enumerate(headers):
             tree.heading(i, text=header)
-            col_w =column_widths.get(header, None)
+            col_w = column_widths.get(header, None)
             if col_w is not None:
                 logger.debug(f"Set {header} width to {col_w}")
                 tree.column(header, width=col_w,
@@ -723,7 +725,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
 
     def display_info(self, items):
         ftid: int = int(items[0])
-        hit_row = self.data_info[self.data_info["Fault_ID"]==ftid]
+        hit_row = self.data_info[self.data_info["Fault_ID"] == ftid]
         # expand to rows
         hit_df = hit_row.explode(column=self.data_info.columns[-3:].to_list()).reset_index(drop=True)
         self.info_tree.delete(*self.info_tree.get_children())
@@ -803,7 +805,7 @@ def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Uni
                 elif dst_file_ext == ".xlsx":
                     df[["time_sec", "time_usec"]] = \
                         df.index.map(lambda i: (int(i.timestamp() * 1e6 // 1e6),
-                                            int(i.timestamp() * 1e6 % 1e6))).to_list()
+                                                int(i.timestamp() * 1e6 % 1e6))).to_list()
                     df.to_excel(dst_file_path, index=False)
         else:
             # raw
