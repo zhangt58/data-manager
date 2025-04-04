@@ -201,7 +201,7 @@ class MainWindow(tk.Tk):
             help_menu.add_command(label="Check for Updates",
                                   command=partial(self.on_check_updates, False))
         help_menu.add_command(label="About", accelerator="Ctrl+A",
-                              command=lambda: self.on_about(self))
+                              command=self.on_about)
         #
         menu_bar.add_cascade(label="File", menu=file_menu)
         menu_bar.add_cascade(label="View", menu=view_menu)
@@ -209,7 +209,7 @@ class MainWindow(tk.Tk):
         #
         self.config(menu=menu_bar)
         self.bind("<Control-q>", lambda e: on_exit())
-        self.bind("<Control-a>", lambda e: self.on_about(self))
+        self.bind("<Control-a>", lambda e: self.on_about())
         self.bind("<F1>", lambda e: on_help())
 
     def read_data(self, filter: Union[str, None] = None) -> tuple[pd.DataFrame, Union[pd.DataFrame, None]]:
@@ -353,18 +353,7 @@ class MainWindow(tk.Tk):
         """
         webbrowser.open("file://intranet/files/analysis/linac-data/wfdata/raw/mps-faults.html")
 
-    def on_about(self, parent):
-        about_dialog = tk.Toplevel(parent)
-        about_dialog.title("About DM-Wave")
-        #
-        frame = ttk.Frame(about_dialog)
-        frame.pack(expand=True, fill=tk.BOTH)
-        #
-        text_area = scrolledtext.ScrolledText(frame, wrap=tk.WORD,
-                                              width=50, height=15)
-        text_area.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
-
-        # Insert your about information into the text area
+    def on_about(self):
         about_text = f"""Data Manager - Wave
 Version {_version}
 
@@ -374,24 +363,10 @@ provide the tools for post-processing and data visualization.
 This is the GUI app for browsing the data in images along with the MPS trip event information.
 
 Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
-        text_area.insert(tk.END, about_text)
-        text_area.config(state=tk.DISABLED)  # Make it read-only
-
-        close_button = ttk.Button(frame, text="Close", command=about_dialog.destroy)
-        close_button.pack(pady=5)
-
-        # position on top of the middle of the main
-        w0, h0 = 600, 400
-        main_w, main_h = parent.winfo_width(), parent.winfo_height()
-        main_x, main_y = parent.winfo_x(), parent.winfo_y()
-        x = main_x + (main_w - w0) // 2
-        y = main_y + (main_h - h0) // 2
-        about_dialog.geometry(f"{w0}x{h0}+{x}+{y}")
-
-        about_dialog.transient(parent)  # Make it a dialog window
-        about_dialog.grab_set()  # Ensure user interaction only with the dialog
-        #
-        parent.wait_window(about_dialog)  # Wait until the dialog is closed
+        messagebox.showinfo(
+            title="DM-Wave: About", message="About DM-Wave",
+            detail=about_text, type=messagebox.OK
+        )
 
     def create_preview_panel(self):
         # right panel
