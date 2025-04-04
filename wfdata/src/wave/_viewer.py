@@ -13,13 +13,13 @@ import sys
 import pandas as pd
 import platform
 import tkinter as tk
+import webbrowser
 from tkinter import (
     ttk,
     filedialog,
     messagebox,
     scrolledtext,
 )
-import io
 from pathlib import Path
 from functools import partial
 from typing import Union
@@ -92,13 +92,11 @@ class MainWindow(tk.Tk):
         self.images_dirpath = Path(imags_dir)
         self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
         self.column_widths = {} if column_widths is None else column_widths
-        self.fig_dpi= fig_dpi
+        self.fig_dpi = fig_dpi
 
         # info for faults table panel
         self.info_var = tk.StringVar()
         self.info_var.set(DEFAULT_INFO_STRING)
-        self.preview_info_var = tk.StringVar()
-        self.preview_info_var.set("")
         self.nrecords_var = tk.StringVar()
         self.nrecords_var.set(f"Total Events: {0:>4d}")
         # info for image panel
@@ -150,7 +148,8 @@ class MainWindow(tk.Tk):
             latest_pkg_ver = v.group(1)
             if latest_pkg_ver > _version:
                 logger.info(f"New version {latest_pkg_ver} is available!")
-                r = messagebox.askquestion(title="Checking for Updates",
+                r = messagebox.askquestion(
+                        title="Checking for Updates",
                         message=f"DataManager-Wave {latest_pkg_ver} is available!",
                         detail=f"Press YES to upgrade from {_version}."
                     )
@@ -159,7 +158,8 @@ class MainWindow(tk.Tk):
                 return
         logger.info("No Updates Available.")
         if not silent:
-            messagebox.showinfo(title="Checking for Updates",
+            messagebox.showinfo(
+                title="Checking for Updates",
                 message="No Updates Available.",
             )
 
@@ -167,12 +167,12 @@ class MainWindow(tk.Tk):
         """ Create the menu bar and the items.
         """
         def on_help():
-            import webbrowser
             webbrowser.open("https://wikihost.frib.msu.edu/AcceleratorPhysics/doku.php?id=data:linacdata")
 
         def on_exit():
-            r = messagebox.askquestion(title="Exit DM-Wave",
-                    message=f"Are you sure to close DM-Wave?",
+            r = messagebox.askquestion(
+                    title="Exit DM-Wave",
+                    message="Are you sure to close DM-Wave?",
                 )
             if r == messagebox.YES:
                 self.destroy()
@@ -201,16 +201,16 @@ class MainWindow(tk.Tk):
             help_menu.add_command(label="Check for Updates",
                                   command=partial(self.on_check_updates, False))
         help_menu.add_command(label="About", accelerator="Ctrl+A",
-                              command=lambda:self.on_about(self))
+                              command=self.on_about)
         #
         menu_bar.add_cascade(label="File", menu=file_menu)
         menu_bar.add_cascade(label="View", menu=view_menu)
         menu_bar.add_cascade(label="Help", menu=help_menu)
         #
         self.config(menu=menu_bar)
-        self.bind("<Control-q>", lambda e:on_exit())
-        self.bind("<Control-a>", lambda e:self.on_about(self))
-        self.bind("<F1>",lambda e:on_help())
+        self.bind("<Control-q>", lambda e: on_exit())
+        self.bind("<Control-a>", lambda e: self.on_about())
+        self.bind("<F1>", lambda e: on_help())
 
     def read_data(self, filter: Union[str, None] = None) -> tuple[pd.DataFrame, Union[pd.DataFrame, None]]:
         """ Read a list or rows data from *csv_file*.
@@ -238,7 +238,7 @@ class MainWindow(tk.Tk):
             df_info = None
         # filter main
         if filter == "MTCA06":
-            df = df[df["Description"]=="MTCA06"].reset_index(drop=True)
+            df = df[df["Description"] == "MTCA06"].reset_index(drop=True)
         # filter info
         if filter == "150us":
             if df_info is None:
@@ -263,6 +263,7 @@ class MainWindow(tk.Tk):
         """
         var_obj.set(new_val)
         linked_obj.config(foreground=new_fg)
+
         def _reset():
             var_obj.set(default_val)
             linked_obj.config(foreground=default_fg)
@@ -330,13 +331,13 @@ class MainWindow(tk.Tk):
         reload_mtca_btn.pack(side=tk.LEFT, padx=5)
         # T Window has 150us (need --trip-info-file)
         reload_fast_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 150{MU_GREEK}s",
-                                          command=partial(self.on_reload, f"150us"))
+                                          command=partial(self.on_reload, "150us"))
         reload_fast_trip_btn.pack(side=tk.LEFT, padx=5)
         #
-        # Event on preview
-        preview_info_lbl = ttk.Label(ctrl_frame1, textvariable=self.preview_info_var)
-        preview_info_lbl.pack(side=tk.RIGHT, padx=2)
-        self.preview_info_lbl = preview_info_lbl
+        # Link to the webview of MPS event table
+        webview_btn = ttk.Button(ctrl_frame1, text="Stats View",
+                                 command=self.on_open_webview)
+        webview_btn.pack(side=tk.RIGHT, padx=2)
 
         # info label
         info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
@@ -347,18 +348,12 @@ class MainWindow(tk.Tk):
         nrows_lbl = ttk.Label(ctrl_frame2, textvariable=self.nrecords_var)
         nrows_lbl.pack(side=tk.RIGHT, padx=2)
 
-    def on_about(self, parent):
-        about_dialog = tk.Toplevel(parent)
-        about_dialog.title("About DM-Wave")
-        #
-        frame = ttk.Frame(about_dialog)
-        frame.pack(expand=True, fill=tk.BOTH)
-        #
-        text_area = scrolledtext.ScrolledText(frame, wrap=tk.WORD,
-                                              width=50, height=15)
-        text_area.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
+    def on_open_webview(self):
+        """ Open the page for MPS faults info.
+        """
+        webbrowser.open("file://intranet/files/analysis/linac-data/wfdata/raw/mps-faults.html")
 
-        # Insert your about information into the text area
+    def on_about(self):
         about_text = f"""Data Manager - Wave
 Version {_version}
 
@@ -368,25 +363,10 @@ provide the tools for post-processing and data visualization.
 This is the GUI app for browsing the data in images along with the MPS trip event information.
 
 Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
-        text_area.insert(tk.END, about_text)
-        text_area.config(state=tk.DISABLED)  # Make it read-only
-
-        close_button = ttk.Button(frame, text="Close", command=about_dialog.destroy)
-        close_button.pack(pady=5)
-
-
-        # position on top of the middle of the main
-        w0, h0 = 600, 400
-        main_w, main_h = parent.winfo_width(), parent.winfo_height()
-        main_x, main_y = parent.winfo_x(), parent.winfo_y()
-        x = main_x + (main_w - w0) // 2
-        y = main_y + (main_h - h0) // 2
-        about_dialog.geometry(f"{w0}x{h0}+{x}+{y}")
-
-        about_dialog.transient(parent)  # Make it a dialog window
-        about_dialog.grab_set()  # Ensure user interaction only with the dialog
-        #
-        parent.wait_window(about_dialog)  # Wait until the dialog is closed
+        messagebox.showinfo(
+            title="DM-Wave: About", message="About DM-Wave",
+            detail=about_text, type=messagebox.OK
+        )
 
     def create_preview_panel(self):
         # right panel
@@ -653,7 +633,6 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         ftid: int = int(row[0])
         img_filepath = self.find_image_path(ftid)
         self.loaded_image_ftid = ftid
-        self.preview_info_var.set(f"Preview: Event-{ftid}")
         if img_filepath is not None:
             self.loaded_image_var.set(str(img_filepath))
             self.info_var.set(DEFAULT_INFO_STRING)
@@ -705,7 +684,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         anchor_default = tk.W
         for i, header in enumerate(headers):
             tree.heading(i, text=header)
-            col_w =column_widths.get(header, None)
+            col_w = column_widths.get(header, None)
             if col_w is not None:
                 logger.debug(f"Set {header} width to {col_w}")
                 tree.column(header, width=col_w,
@@ -723,7 +702,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
 
     def display_info(self, items):
         ftid: int = int(items[0])
-        hit_row = self.data_info[self.data_info["Fault_ID"]==ftid]
+        hit_row = self.data_info[self.data_info["Fault_ID"] == ftid]
         # expand to rows
         hit_df = hit_row.explode(column=self.data_info.columns[-3:].to_list()).reset_index(drop=True)
         self.info_tree.delete(*self.info_tree.get_children())
@@ -803,7 +782,7 @@ def save_data(src_file_path: Path, is_opt: bool) -> tuple[Union[Path, None], Uni
                 elif dst_file_ext == ".xlsx":
                     df[["time_sec", "time_usec"]] = \
                         df.index.map(lambda i: (int(i.timestamp() * 1e6 // 1e6),
-                                            int(i.timestamp() * 1e6 % 1e6))).to_list()
+                                                int(i.timestamp() * 1e6 % 1e6))).to_list()
                     df.to_excel(dst_file_path, index=False)
         else:
             # raw
