@@ -225,6 +225,8 @@ class FigureWindow(tk.Toplevel):
                 command=partial(self.on_normalize_bcm_traces, bcm_fscale_map,
                                 figure, ax_bcm)
         )
+        self.bcm_norm_toggle_chkbox = bcm_norm_toggle_chkbox
+        #
         self.show_as_dbcm_toggle_var = tk.BooleanVar(value=False)
         show_as_dbcm_chkbox = ttk.Checkbutton(bcm_ctrl_frame,
                 text="DBCM", width=5,
@@ -232,6 +234,7 @@ class FigureWindow(tk.Toplevel):
                 command=partial(self.on_plot_diff_bcm_traces,
                                 figure, ax_bcm)
         )
+        self.show_as_dbcm_chkbox = show_as_dbcm_chkbox
         if dbcm_df is None or dbcm_df.empty:
             show_as_dbcm_chkbox.config(state="disabled")
         else:
@@ -339,11 +342,15 @@ class FigureWindow(tk.Toplevel):
         """
         show_dbcm = self.show_as_dbcm_toggle_var.get()
         if show_dbcm:
+            # disable norm bcm checkbox
+            self.bcm_norm_toggle_chkbox.config(state="disabled")
             logger.info("Plotting DBCM traces...")
             self.save_bcm_plot(ax)
             self.restore_dbcm_plot(fig, ax)
             fig.canvas.draw_idle()
         else:
+            # enable norm bcm checkbox
+            self.bcm_norm_toggle_chkbox.config(state="normal")
             logger.info("Plotting BCM traces...")
             self.save_dbcm_plot(ax)
             self.restore_bcm_plot(fig, ax)
@@ -354,11 +361,15 @@ class FigureWindow(tk.Toplevel):
         """
         to_norm = self.bcm_norm_toggle_var.get()
         if to_norm:
+            # disable DBCM show checkbox
+            self.show_as_dbcm_chkbox.config(state="disabled")
             logger.info(f"Normalizing BCM traces with FSCALE data)")
             for l, y0, sf in zip(ax.get_lines(), self.bcm_ydata0, self.bcm_fscales):
                 logger.info(f"Scale trace {l.get_label()} by x{sf}")
                 l.set_ydata(y0 * sf)
         else:
+            # enable DBCM show checkbox
+            self.show_as_dbcm_chkbox.config(state="normal")
             logger.info("Show BCM raw traces")
             for l, y0 in zip(ax.get_lines(), self.bcm_ydata0):
                 l.set_ydata(y0)
