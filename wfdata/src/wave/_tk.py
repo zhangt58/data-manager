@@ -217,7 +217,8 @@ class FigureWindow(tk.Toplevel):
             i += 1
 
         # bcm_ctrl frame
-        bcm_ctrl_lbl = ttk.Label(bcm_ctrl_frame, text="BCM")
+        bcm_ctrl_lbl = ttk.Label(bcm_ctrl_frame, text="BCM RAW")
+        self.bcm_ctrl_lbl = bcm_ctrl_lbl
         self.bcm_norm_toggle_var = tk.BooleanVar(value=False)
         bcm_norm_toggle_chkbox = ttk.Checkbutton(bcm_ctrl_frame,
                 text="Normlize", width=9,
@@ -243,8 +244,8 @@ class FigureWindow(tk.Toplevel):
         if bcm_fscale_map is None or not bcm_fscale_map:
             bcm_norm_toggle_chkbox.config(state="disabled")
         #
-        bcm_ctrl_lbl.pack(side=tk.LEFT, padx=2)
-        bcm_norm_toggle_chkbox.pack(side=tk.LEFT, padx=2)
+        bcm_ctrl_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        bcm_norm_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
         show_as_dbcm_chkbox.pack(side=tk.RIGHT, padx=2)
 
         # yaxis_frame
@@ -348,13 +349,14 @@ class FigureWindow(tk.Toplevel):
             self.save_bcm_plot(ax)
             self.restore_dbcm_plot(fig, ax)
             fig.canvas.draw_idle()
+            self.bcm_ctrl_lbl.config(text="DBCM", foreground="red")
         else:
             # enable norm bcm checkbox
             self.bcm_norm_toggle_chkbox.config(state="normal")
             logger.info("Plotting BCM traces...")
             self.save_dbcm_plot(ax)
             self.restore_bcm_plot(fig, ax)
-
+            self.bcm_ctrl_lbl.config(text="BCM RAW", foreground="black")
 
     def on_normalize_bcm_traces(self, bcm_fscale_map: dict, fig, ax):
         """ Normalize the BCM traces with FSCALE data for comparable.
@@ -367,12 +369,14 @@ class FigureWindow(tk.Toplevel):
             for l, y0, sf in zip(ax.get_lines(), self.bcm_ydata0, self.bcm_fscales):
                 logger.info(f"Scale trace {l.get_label()} by x{sf}")
                 l.set_ydata(y0 * sf)
+            self.bcm_ctrl_lbl.config(text="BCM NORM", foreground="blue")
         else:
             # enable DBCM show checkbox
             self.show_as_dbcm_chkbox.config(state="normal")
             logger.info("Show BCM raw traces")
             for l, y0 in zip(ax.get_lines(), self.bcm_ydata0):
                 l.set_ydata(y0)
+            self.bcm_ctrl_lbl.config(text="BCM RAW", foreground="black")
         _auto_scale_y(ax)
         fig.canvas.draw_idle()
 
