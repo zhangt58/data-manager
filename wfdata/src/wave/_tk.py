@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
+import pandas as pd
 import tkinter as tk
 from functools import (
     partial,
@@ -21,7 +22,7 @@ from ._log import logger
 
 class FigureWindow(tk.Toplevel):
     # Present figures in a Tkinter GUI,
-    # keywords: fig_dpi, theme_name
+    # keywords: fig_dpi, theme_name, dbcm_dfs: list[pd.DataFrame], bcm_fscale_maps: list[dict]
     def __init__(self, figures: list[tuple],
                  window_title: str, grid: tuple[int, int],
                  padx: int = 5, pady: int = 5, notes: str = "",
@@ -44,11 +45,17 @@ class FigureWindow(tk.Toplevel):
         for j in range(ncols):
             main_frame.columnconfigure(j, weight=1)
 
+        dbcm_dfs = kws.get('dbcm_dfs', None)
+        bcm_fscale_maps = kws.get('bcm_fscale_maps', None)
+
         # layout figures
         for i, (fig, fig_title) in enumerate(figures):
             irow, icol = i // ncols, i % ncols
+            dbcm_df = dbcm_dfs[i] if dbcm_dfs is not None else None
+            bcm_fscale_map = bcm_fscale_maps[i] if bcm_fscale_maps is not None else None
             self.place_figure(main_frame, fig, fig_title, irow, icol, padx, pady,
-                              fig_dpi=kws.get('fig_dpi', None))
+                              fig_dpi=kws.get('fig_dpi', None), dbcm_df=dbcm_df,
+                              bcm_fscale_map=bcm_fscale_map)
 
         # bottom area (notes and Quit button)
         bottom_frame = ttk.Frame(self)
@@ -65,30 +72,38 @@ class FigureWindow(tk.Toplevel):
         quit_btn.pack(side=tk.RIGHT, fill=tk.X, pady=pady, padx=padx)
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
-                     padx: int = 5, pady: int = 5, fig_dpi: int = None):
+                     padx: int = 5, pady: int = 5, fig_dpi: int = None, **kws):
+        # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict
+        dbcm_df = kws.get('dbcm_df', None)
+        bcm_fscale_map = kws.get('bcm_fscale_map', None)
+        #
         frame = ttk.LabelFrame(parent, text=title, borderwidth=1, relief=tk.GROOVE)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")
 
         # tools frame:
-        # |toolbar | X-Axis |
-        # |phase   | Y-Axis |
+        #      0         1          2
+        #0 |toolbar | bcm_ctrl | X-Axis |
+        #1 |phase   |          | Y-Axis |
         # figure frame
         # misc frame
         #
         tools_frame = ttk.Frame(frame)
         tools_frame.pack(fill=tk.X, padx=2, pady=2)
-        tools_frame.columnconfigure(0, weight=1)
-        tools_frame.columnconfigure(1, weight=0)
+        tools_frame.columnconfigure(0, weight=2)
+        tools_frame.columnconfigure(1, weight=1)
+        tools_frame.columnconfigure(2, weight=0)
 
         tb_frame = ttk.Frame(tools_frame)
+        bcm_ctrl_frame = ttk.Frame(tools_frame)
         xaxis_frame = ttk.Frame(tools_frame)
         tb_frame.grid(row=0, column=0, sticky="ew")
-        xaxis_frame.grid(row=0, column=1, sticky="ew")
+        bcm_ctrl_frame.grid(row=0, column=1, sticky="ew")
+        xaxis_frame.grid(row=0, column=2, sticky="ew")
         #
         pha_frame = ttk.Frame(tools_frame)
         yaxis_frame = ttk.Frame(tools_frame)
         pha_frame.grid(row=1, column=0, sticky="ew")
-        yaxis_frame.grid(row=1, column=1, sticky="ew")
+        yaxis_frame.grid(row=1, column=2, sticky="ew")
 
         # figure
         fig_frame = ttk.Frame(frame)
@@ -161,29 +176,79 @@ class FigureWindow(tk.Toplevel):
         # time array of phase figure
         self.pha0_t: np.ndarray = None
 
+        # bcm raw trace
+        self.bcm_ydata0: list[np.ndarray] = []
+        self.bcm_fscales: list[float] = []
+        ax_bcm = None
+
         # xaxis frame
         i = 1
         sync_lbl = ttk.Label(xaxis_frame, text="Sync ↔")
         sync_lbl.pack(side=tk.LEFT, padx=1)
         for ax in figure.get_axes():
-            if ax.get_ylabel() == "NPERMIT":
+            ylbl = ax.get_ylabel()
+            if ylbl == "NPERMIT":
                 continue
             ax.text(-0.05, 1.05, f"{i}", transform=ax.transAxes,
                     size=self.fs_init[0],
                     bbox=dict(facecolor='w', alpha=0.9, edgecolor='k'))
-            if 'Phi' in ax.get_ylabel():
+            if 'Phi' in ylbl:
                 ax_pha = ax
-                ax_pha_ylabel0: str = ax.get_ylabel()
+                ax_pha_ylabel0: str = ylbl
                 self.pha0 = [l.get_ydata() for l in ax.get_lines()]
                 if len(ax.get_lines()) != 0:
                     self.pha0_t = ax.get_lines()[0].get_xdata()
                 else:
                     self.pha0_t = None
                 # print(type(self.pha0[0]), self.pha0[0][:100])
+            elif 'Current' in ylbl and bcm_fscale_map is not None:
+                ax_bcm = ax
+                for l in ax.get_lines():
+                    name = l.get_label()
+                    for k, v in bcm_fscale_map.items():
+                        if name in k:
+                            self.bcm_fscales.append(v)
+                            break
+                    self.bcm_ydata0.append(l.get_ydata())
+
             sync_btn = ttk.Button(xaxis_frame, text=f"{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
             sync_btn.pack(side=tk.LEFT, padx=1)
             i += 1
+
+        # bcm_ctrl frame
+        bcm_ctrl_lbl = ttk.Label(bcm_ctrl_frame, text="BCM RAW")
+        self.bcm_ctrl_lbl = bcm_ctrl_lbl
+        self.bcm_norm_toggle_var = tk.BooleanVar(value=False)
+        bcm_norm_toggle_chkbox = ttk.Checkbutton(bcm_ctrl_frame,
+                text="Normlize", width=9,
+                variable=self.bcm_norm_toggle_var,
+                command=partial(self.on_normalize_bcm_traces, bcm_fscale_map,
+                                figure, ax_bcm)
+        )
+        self.bcm_norm_toggle_chkbox = bcm_norm_toggle_chkbox
+        #
+        self.show_as_dbcm_toggle_var = tk.BooleanVar(value=False)
+        show_as_dbcm_chkbox = ttk.Checkbutton(bcm_ctrl_frame,
+                text="DBCM", width=5,
+                variable=self.show_as_dbcm_toggle_var,
+                command=partial(self.on_plot_diff_bcm_traces,
+                                figure, ax_bcm)
+        )
+        self.show_as_dbcm_chkbox = show_as_dbcm_chkbox
+        if dbcm_df is None or dbcm_df.empty:
+            show_as_dbcm_chkbox.config(state="disabled")
+        else:
+            self.dbcm_df = dbcm_df
+            self.dbcm_plots = None
+        if bcm_fscale_map is None or not bcm_fscale_map:
+            bcm_norm_toggle_chkbox.config(state="disabled")
+        #
+        bcm_ctrl_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        bcm_norm_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
+        show_as_dbcm_chkbox.pack(side=tk.RIGHT, padx=2)
+
+        # yaxis_frame
         # add a button to adjust auto scale Y limits
         auto_y_lbl = ttk.Label(yaxis_frame, text="Auto Y")
         auto_y_btn = ttk.Button(yaxis_frame, text="↕", width=2,
@@ -228,6 +293,93 @@ class FigureWindow(tk.Toplevel):
         t_0 = self.find_first_valid_t()
         sub_pha_txt1.insert(0, str(t_0))
         sub_pha_txt2.insert(0, str(t_0 + 10))
+
+    def save_bcm_plot(self, ax):
+        """ Save BCM plot.
+        """
+        self.bcm_plots = []
+        for l in ax.get_lines():
+            self.bcm_plots.append((
+                l.get_label(), l.get_lw(), l.get_ds(), l.get_color(),
+                l.get_xdata(), l.get_ydata()
+            ))
+
+    def restore_bcm_plot(self, fig, ax):
+        """ Restore BCM plot
+        """
+        ax.lines.clear()
+        for name, lw, ds, color, xdata, ydata in self.bcm_plots:
+            ax.plot(xdata, ydata, label=name, color=color, lw=lw, ds=ds)
+        _auto_scale_y(ax)
+        fig.canvas.draw_idle()
+
+    def save_dbcm_plot(self, ax):
+        """ Save DBCM plot.
+        """
+        self.dbcm_plots = []
+        for l in ax.get_lines():
+            self.dbcm_plots.append((
+                l.get_label(), l.get_lw(), l.get_ds(), l.get_color(),
+                l.get_xdata(), l.get_ydata()
+            ))
+
+    def restore_dbcm_plot(self, fig, ax):
+        """ Restore or plot DBCM plot.
+        """
+        ax.lines.clear()
+        if self.dbcm_plots is None:
+            # create new
+            _, lw, ds, _, xdata, _ = self.bcm_plots[0]
+            for name, d in self.dbcm_df.items():
+                ax.plot(xdata, d.to_numpy(), label=name, lw=lw, ds=ds)
+        else:
+            for name, lw, ds, color, xdata, ydata in self.dbcm_plots:
+                ax.plot(xdata, ydata, label=name, color=color, lw=lw, ds=ds)
+        _auto_scale_y(ax)
+        fig.canvas.draw_idle()
+
+    def on_plot_diff_bcm_traces(self, fig, ax):
+        """ Plot the DBCM traces in a new figure.
+        """
+        show_dbcm = self.show_as_dbcm_toggle_var.get()
+        if show_dbcm:
+            # disable norm bcm checkbox
+            self.bcm_norm_toggle_chkbox.config(state="disabled")
+            logger.info("Plotting DBCM traces...")
+            self.save_bcm_plot(ax)
+            self.restore_dbcm_plot(fig, ax)
+            fig.canvas.draw_idle()
+            self.bcm_ctrl_lbl.config(text="DBCM", foreground="red")
+        else:
+            # enable norm bcm checkbox
+            self.bcm_norm_toggle_chkbox.config(state="normal")
+            logger.info("Plotting BCM traces...")
+            self.save_dbcm_plot(ax)
+            self.restore_bcm_plot(fig, ax)
+            self.bcm_ctrl_lbl.config(text="BCM RAW", foreground="black")
+
+    def on_normalize_bcm_traces(self, bcm_fscale_map: dict, fig, ax):
+        """ Normalize the BCM traces with FSCALE data for comparable.
+        """
+        to_norm = self.bcm_norm_toggle_var.get()
+        if to_norm:
+            # disable DBCM show checkbox
+            self.show_as_dbcm_chkbox.config(state="disabled")
+            logger.info(f"Normalizing BCM traces with FSCALE data)")
+            for l, y0, sf in zip(ax.get_lines(), self.bcm_ydata0, self.bcm_fscales):
+                logger.info(f"Scale trace {l.get_label()} by x{sf}")
+                l.set_ydata(y0 * sf)
+            self.bcm_ctrl_lbl.config(text="BCM NORM", foreground="blue")
+        else:
+            # enable DBCM show checkbox
+            self.show_as_dbcm_chkbox.config(state="normal")
+            logger.info("Show BCM raw traces")
+            for l, y0 in zip(ax.get_lines(), self.bcm_ydata0):
+                l.set_ydata(y0)
+            self.bcm_ctrl_lbl.config(text="BCM RAW", foreground="black")
+        _auto_scale_y(ax)
+        fig.canvas.draw_idle()
+
 
     def find_first_valid_t(self) -> int:
         """ Find the first t value that corresponding phase values are all valid for all phase
