@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import cmath
+import json
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
@@ -59,6 +60,8 @@ def _process_format_v1(store):
     # df_info = store['/info']
     df_bcm = store['/bcm'].T
     df_bpm = store['/bpm'].T
+    # BCM FSCALE
+    df_bcm_fscale = store['/bcm_fscale'] if '/bcm_fscale' in store else None
 
     # BCM
     bcm_grps = df_grp.index[df_grp.index.str.startswith('BCM')]
@@ -75,6 +78,10 @@ def _process_format_v1(store):
     except Exception as e:
         logger.error(f"Error processing BCM {store.filename}: {e}")
         return None, None
+    if df_bcm_fscale is not None:
+        # a little bit hacking
+        logger.info("Attaching BCM FSCALE data to the first BCM dataset...")
+        bcm_dfs[0].attrs['fscale'] = df_bcm_fscale[0].to_dict()
 
     # BPM
     bpm_grps = df_grp.index[~df_grp.index.str.startswith('BCM')]
@@ -102,15 +109,23 @@ def _process_format_v1(store):
 def read_data(filepath: Union[str, Path],
               t_range: Union[tuple[int, int], None] = (-800, 400),
               is_opt: bool = False):
-    """ Read and consolidate dataset, if is_opt is set, deal with optimized dataset,
-    otherwise, read from raw.
+    """ Read and consolidate dataset. If *is_opt* is set, read the *filepath* as the optimized
+    dataset, otherwise, as raw formatted.
     """
     logger.info(f"Reading {filepath}...")
     if is_opt:
         # read the converted file, smaller size.
         with pd.HDFStore(filepath, mode="r") as store:
             t0_s = store.get_storer('TimeWindow').attrs.t_zero
+            # BCM-FSCALE
+            bcm_fscale_map = None
+            if '/BCM' in store.keys():
+                attrs = store.get_storer('BCM').attrs
+                if 'fscale_json' in attrs:
+                    bcm_fscale_map = json.loads(attrs.fscale_json)
             df_all = pd.concat([store[k] for k in store.keys()], axis=1)
+            if bcm_fscale_map is not None:
+                df_all.attrs['BCM-FSCALE'] = bcm_fscale_map
         #
         t0_idx: int = (df_all["t_us"]==0.0).argmax()
         if t_range is not None:
@@ -177,6 +192,21 @@ def read_data(filepath: Union[str, Path],
     # drop BPM_D####:MAG/PHAi columns
     cols_to_drop = df.filter(regex=r"BPM_.*[1-4]{1}$").columns
     df.drop(columns=cols_to_drop, inplace=True)
+
+    # produce DBCM columns if possible
+    # look for BCM FSCALE data
+    bcm_fscale_map = None
+    for i in dfs:
+        if 'fscale' in i.attrs:
+            bcm_fscale_map = i.attrs['fscale']
+            break
+    if bcm_fscale_map is not None:
+        logger.info(f"Generating DBCM dataset...")
+        logger.debug(f"Got BCM FSCALE data: {bcm_fscale_map}")
+        _generate_dbcm_inplace(df, bcm_fscale_map)
+        # attach the fscale data
+        df.attrs['BCM-FSCALE'] = bcm_fscale_map
+
     logger.info(f"Reading {filepath}...done!")
     return df, t0_str
 
@@ -275,6 +305,58 @@ def plot(df: pd.DataFrame, t0: str, title: str, **kws):
             lbl_o.set_fontsize(xylabel_fontdict['size'])
             lbl_o.set_fontfamily(xylabel_fontdict['family'])
     return fig
+
+
+def _generate_dbcm_inplace(df: pd.DataFrame, bcm_fscale_map: dict) -> None:
+    """ Generate and add as new columns as the DBCM data, with the given BCM FSCALE data.
+    """
+    # x1 := BCM_D1120, f1 := bcm_fscal_map[...], f1c := ...<copy>...
+    # x2 := BCM_D2183
+    # x3 := BCM_D2264
+    # x4 := BCM_D2519
+    # x5 := BCM_D5521
+    # d1 := DBCM_LS1TRANS (D1120 - D2183) = x1 * f1 - x2 * f2
+    # d2 := DBCM_CHRGSTAT (D2183 - D2264) = x2 * f2 - x3 * f3
+    # d3 := DBCM_STRPEFF  (D2264 - D2519) = x3 * f3 - x4 * f4
+    # d4 := DBCM_LINACBDS (D1120c - D5521) = x1 *f1_copy - x5 * f5
+    f1 = bcm_fscale_map['FE_MEBT:BCM_D1120:FSCALE_CSET']
+    f1c = bcm_fscale_map['FE_COPY:BCM_D1120:FSCALE_CSET']
+    f2 = bcm_fscale_map["FS1_CSS:BCM_D2183:FSCALE_CSET"]
+    f3 = bcm_fscale_map["FS1_CSS:BCM_D2264:FSCALE_CSET"]
+    f4 = bcm_fscale_map["FS1_BMS:BCM_D2519:FSCALE_CSET"]
+    f5 = bcm_fscale_map["BDS_BTS:BCM_D5521:FSCALE_CSET"]
+
+    # the scaled waveform
+    s1 = df.get('BCM_D1120', None)
+    if s1 is not None:
+        s1c = s1 * f1c
+        s1 *= f1
+    s2 = df.get('BCM_D2183', None)
+    if s2 is not None:
+        s2 *= f2
+    s3 = df.get('BCM_D2264', None)
+    if s3 is not None:
+        s3 *= f3
+    s4 = df.get('BCM_D2519', None)
+    if s4 is not None:
+        s4 *= f4
+    s5 = df.get('BCM_D5521', None)
+    if s5 is not None:
+        s5 *= f5
+
+    # dbcm
+    if s1 is not None and s2 is not None:
+        df['DBCM_LS1TRANS'] = s1 - s2
+        logger.debug("Added DBCM_LS1TRANS: D1120 - D2183")
+    if s2 is not None and s3 is not None:
+        df['DBCM_CHRGSTAT'] = s2 - s3
+        logger.debug("Added DBCM_CHRGSTAT: D2183 - D2264")
+    if s3 is not None and s4 is not None:
+        df['DBCM_STRPEFF'] = s3 - s4
+        logger.debug("Added DBCM_STRPEFF: D2264 - D2519")
+    if s4 is not None and s5 is not None:
+        df['DBCM_LINACBDS'] = s1c - s5
+        logger.debug("Added DBCM_LINACBDS: D1120c - D5521")
 
 
 if __name__ == "__main__":
