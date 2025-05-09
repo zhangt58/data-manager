@@ -176,25 +176,41 @@ class FigureWindow(tk.Toplevel):
         # time array of phase figure
         self.pha0_t: np.ndarray = None
 
+        # bcm raw trace
+        self.bcm_ydata0: list[np.ndarray] = []
+        self.bcm_fscales: list[float] = []
+        ax_bcm = None
+
         # xaxis frame
         i = 1
         sync_lbl = ttk.Label(xaxis_frame, text="Sync ↔")
         sync_lbl.pack(side=tk.LEFT, padx=1)
         for ax in figure.get_axes():
-            if ax.get_ylabel() == "NPERMIT":
+            ylbl = ax.get_ylabel()
+            if ylbl == "NPERMIT":
                 continue
             ax.text(-0.05, 1.05, f"{i}", transform=ax.transAxes,
                     size=self.fs_init[0],
                     bbox=dict(facecolor='w', alpha=0.9, edgecolor='k'))
-            if 'Phi' in ax.get_ylabel():
+            if 'Phi' in ylbl:
                 ax_pha = ax
-                ax_pha_ylabel0: str = ax.get_ylabel()
+                ax_pha_ylabel0: str = ylbl
                 self.pha0 = [l.get_ydata() for l in ax.get_lines()]
                 if len(ax.get_lines()) != 0:
                     self.pha0_t = ax.get_lines()[0].get_xdata()
                 else:
                     self.pha0_t = None
                 # print(type(self.pha0[0]), self.pha0[0][:100])
+            elif 'Current' in ylbl and bcm_fscale_map is not None:
+                ax_bcm = ax
+                for l in ax.get_lines():
+                    name = l.get_label()
+                    for k, v in bcm_fscale_map.items():
+                        if name in k:
+                            self.bcm_fscales.append(v)
+                            break
+                    self.bcm_ydata0.append(l.get_ydata())
+
             sync_btn = ttk.Button(xaxis_frame, text=f"{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
             sync_btn.pack(side=tk.LEFT, padx=1)
@@ -206,7 +222,8 @@ class FigureWindow(tk.Toplevel):
         bcm_norm_toggle_chkbox = ttk.Checkbutton(bcm_ctrl_frame,
                 text="Normlize", width=9,
                 variable=self.bcm_norm_toggle_var,
-                command=partial(self.on_normalize_bcm_traces, bcm_fscale_map)
+                command=partial(self.on_normalize_bcm_traces, bcm_fscale_map,
+                                figure, ax_bcm)
         )
         plot_dbcm_btn = ttk.Button(bcm_ctrl_frame, text="DBCM", width=5,
                 command=partial(self.on_plot_diff_bcm_traces, dbcm_df)
@@ -215,7 +232,7 @@ class FigureWindow(tk.Toplevel):
             plot_dbcm_btn.config(state="disabled")
         if bcm_fscale_map is None or not bcm_fscale_map:
             bcm_norm_toggle_chkbox.config(state="disabled")
-        # 
+        #
         bcm_ctrl_lbl.pack(side=tk.LEFT, padx=2)
         bcm_norm_toggle_chkbox.pack(side=tk.LEFT, padx=2)
         plot_dbcm_btn.pack(side=tk.RIGHT, padx=2)
@@ -272,15 +289,22 @@ class FigureWindow(tk.Toplevel):
         logger.info("Plotting DBCM traces...")
         print(dbcm_df)
 
-    def on_normalize_bcm_traces(self, bcm_fscale_map: dict):
+    def on_normalize_bcm_traces(self, bcm_fscale_map: dict, fig, ax):
         """ Normalize the BCM traces with FSCALE data for comparable.
         """
         to_norm = self.bcm_norm_toggle_var.get()
         if to_norm:
-            logger.info("Normalizing BCM traces with FSCALE data")
-            print(bcm_fscale_map)
+            logger.info(f"Normalizing BCM traces with FSCALE data)")
+            for l, y0, sf in zip(ax.get_lines(), self.bcm_ydata0, self.bcm_fscales):
+                logger.info(f"Scale trace {l.get_label()} by x{sf}")
+                l.set_ydata(y0 * sf)
         else:
             logger.info("Show BCM raw traces")
+            for l, y0 in zip(ax.get_lines(), self.bcm_ydata0):
+                l.set_ydata(y0)
+        _auto_scale_y(ax)
+        fig.canvas.draw_idle()
+
 
     def find_first_valid_t(self) -> int:
         """ Find the first t value that corresponding phase values are all valid for all phase
