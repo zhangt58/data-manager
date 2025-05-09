@@ -254,7 +254,14 @@ def _export_df_as_xlsx(df: pd.DataFrame, out_filepath: Path):
     df[["time_sec", "time_usec"]] = \
         df.index.map(lambda i: (int(i.timestamp() * 1e6 // 1e6),
                                 int(i.timestamp() * 1e6 % 1e6))).to_list()
-    df.to_excel(out_filepath, index=False)
+    df_bcm_fscale = None
+    if 'BCM-FSCALE' in df.attrs:
+        df_bcm_fscale = pd.Series(df.attrs['BCM-FSCALE']).to_frame(name='value')
+
+    with pd.ExcelWriter(out_filepath) as writer:
+        df.to_excel(writer, sheet_name="data", index=False)
+        if df_bcm_fscale is not None:
+            df_bcm_fscale.to_excel(writer, sheet_name="BCM-FSCALE")
 
 
 def plot_tool(call_as_subtool: bool = False, prog: str = None):
