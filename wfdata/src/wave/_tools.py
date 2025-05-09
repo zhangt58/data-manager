@@ -235,6 +235,8 @@ def _export_df_as_h5(df: pd.DataFrame, out_filepath: Path):
     t_zero: str = df[df.t_us == 0].index[0].isoformat()
     store.get_storer('TimeWindow').attrs.t_start = t_start
     store.get_storer('TimeWindow').attrs.t_zero = t_zero
+    if 'BCM-FSCALE' in df.attrs:
+        store.get_storer('BCM').attrs.fscale_json = json.dumps(df.attrs['BCM-FSCALE'])
     store.close()
 
 

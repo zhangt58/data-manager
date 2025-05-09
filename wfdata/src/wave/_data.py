@@ -195,6 +195,8 @@ def read_data(filepath: Union[str, Path],
         logger.info(f"Generating DBCM dataset...")
         logger.debug(f"Got BCM FSCALE data: {bcm_fscale_map}")
         _generate_dbcm_inplace(df, bcm_fscale_map)
+        # attach the fscale data
+        df.attrs['BCM-FSCALE'] = bcm_fscale_map
 
     logger.info(f"Reading {filepath}...done!")
     return df, t0_str
