@@ -75,13 +75,13 @@ def _process_format_v1(store):
             _bcm_df = df_bcm[df_grp[bcm_grp]]
             _t_idx = pd.date_range(start=df_t0[bcm_grp], periods=_bcm_df.shape[0], freq='us')
             bcm_dfs.append(_bcm_df.set_index(_t_idx))
+        if df_bcm_fscale is not None:
+            # a little bit hacking
+            logger.info("Attaching BCM FSCALE data to the first BCM dataset...")
+            bcm_dfs[0].attrs['fscale'] = df_bcm_fscale[0].to_dict()
     except Exception as e:
         logger.error(f"Error processing BCM {store.filename}: {e}")
         return None, None
-    if df_bcm_fscale is not None:
-        # a little bit hacking
-        logger.info("Attaching BCM FSCALE data to the first BCM dataset...")
-        bcm_dfs[0].attrs['fscale'] = df_bcm_fscale[0].to_dict()
 
     # BPM
     bpm_grps = df_grp.index[~df_grp.index.str.startswith('BCM')]
