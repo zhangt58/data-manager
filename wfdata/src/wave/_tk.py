@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
+import pandas as pd
 import tkinter as tk
 from functools import (
     partial,
@@ -21,7 +22,7 @@ from ._log import logger
 
 class FigureWindow(tk.Toplevel):
     # Present figures in a Tkinter GUI,
-    # keywords: fig_dpi, theme_name
+    # keywords: fig_dpi, theme_name, dbcm_dfs: list[pd.DataFrame], bcm_fscale_maps: list[dict]
     def __init__(self, figures: list[tuple],
                  window_title: str, grid: tuple[int, int],
                  padx: int = 5, pady: int = 5, notes: str = "",
@@ -44,11 +45,17 @@ class FigureWindow(tk.Toplevel):
         for j in range(ncols):
             main_frame.columnconfigure(j, weight=1)
 
+        dbcm_dfs = kws.get('dbcm_dfs', None)
+        bcm_fscale_maps = kws.get('bcm_fscale_maps', None)
+
         # layout figures
         for i, (fig, fig_title) in enumerate(figures):
             irow, icol = i // ncols, i % ncols
+            dbcm_df = dbcm_dfs[i] if dbcm_dfs is not None else None
+            bcm_fscale_map = bcm_fscale_maps[i] if bcm_fscale_maps is not None else None
             self.place_figure(main_frame, fig, fig_title, irow, icol, padx, pady,
-                              fig_dpi=kws.get('fig_dpi', None))
+                              fig_dpi=kws.get('fig_dpi', None), dbcm_df=dbcm_df,
+                              bcm_fscale_map=bcm_fscale_map)
 
         # bottom area (notes and Quit button)
         bottom_frame = ttk.Frame(self)
@@ -65,30 +72,38 @@ class FigureWindow(tk.Toplevel):
         quit_btn.pack(side=tk.RIGHT, fill=tk.X, pady=pady, padx=padx)
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
-                     padx: int = 5, pady: int = 5, fig_dpi: int = None):
+                     padx: int = 5, pady: int = 5, fig_dpi: int = None, **kws):
+        # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict
+        dbcm_df = kws.get('dbcm_df', None)
+        bcm_fscale_map = kws.get('bcm_fscale_map', None)
+        #
         frame = ttk.LabelFrame(parent, text=title, borderwidth=1, relief=tk.GROOVE)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")
 
         # tools frame:
-        # |toolbar | X-Axis |
-        # |phase   | Y-Axis |
+        #      0         1          2
+        #0 |toolbar | bcm_ctrl | X-Axis |
+        #1 |phase   |          | Y-Axis |
         # figure frame
         # misc frame
         #
         tools_frame = ttk.Frame(frame)
         tools_frame.pack(fill=tk.X, padx=2, pady=2)
-        tools_frame.columnconfigure(0, weight=1)
-        tools_frame.columnconfigure(1, weight=0)
+        tools_frame.columnconfigure(0, weight=2)
+        tools_frame.columnconfigure(1, weight=1)
+        tools_frame.columnconfigure(2, weight=0)
 
         tb_frame = ttk.Frame(tools_frame)
+        bcm_ctrl_frame = ttk.Frame(tools_frame)
         xaxis_frame = ttk.Frame(tools_frame)
         tb_frame.grid(row=0, column=0, sticky="ew")
-        xaxis_frame.grid(row=0, column=1, sticky="ew")
+        bcm_ctrl_frame.grid(row=0, column=1, sticky="ew")
+        xaxis_frame.grid(row=0, column=2, sticky="ew")
         #
         pha_frame = ttk.Frame(tools_frame)
         yaxis_frame = ttk.Frame(tools_frame)
         pha_frame.grid(row=1, column=0, sticky="ew")
-        yaxis_frame.grid(row=1, column=1, sticky="ew")
+        yaxis_frame.grid(row=1, column=2, sticky="ew")
 
         # figure
         fig_frame = ttk.Frame(frame)
@@ -184,6 +199,28 @@ class FigureWindow(tk.Toplevel):
                                   command=partial(sync_xlimits, figure, ax))
             sync_btn.pack(side=tk.LEFT, padx=1)
             i += 1
+
+        # bcm_ctrl frame
+        bcm_ctrl_lbl = ttk.Label(bcm_ctrl_frame, text="BCM")
+        self.bcm_norm_toggle_var = tk.BooleanVar(value=False)
+        bcm_norm_toggle_chkbox = ttk.Checkbutton(bcm_ctrl_frame,
+                text="Normlize", width=9,
+                variable=self.bcm_norm_toggle_var,
+                command=partial(self.on_normalize_bcm_traces, bcm_fscale_map)
+        )
+        plot_dbcm_btn = ttk.Button(bcm_ctrl_frame, text="DBCM", width=5,
+                command=partial(self.on_plot_diff_bcm_traces, dbcm_df)
+        )
+        if dbcm_df is None or dbcm_df.empty:
+            plot_dbcm_btn.config(state="disabled")
+        if bcm_fscale_map is None or not bcm_fscale_map:
+            bcm_norm_toggle_chkbox.config(state="disabled")
+        # 
+        bcm_ctrl_lbl.pack(side=tk.LEFT, padx=2)
+        bcm_norm_toggle_chkbox.pack(side=tk.LEFT, padx=2)
+        plot_dbcm_btn.pack(side=tk.RIGHT, padx=2)
+
+        # yaxis_frame
         # add a button to adjust auto scale Y limits
         auto_y_lbl = ttk.Label(yaxis_frame, text="Auto Y")
         auto_y_btn = ttk.Button(yaxis_frame, text="↕", width=2,
@@ -228,6 +265,22 @@ class FigureWindow(tk.Toplevel):
         t_0 = self.find_first_valid_t()
         sub_pha_txt1.insert(0, str(t_0))
         sub_pha_txt2.insert(0, str(t_0 + 10))
+
+    def on_plot_diff_bcm_traces(self, dbcm_df: pd.DataFrame):
+        """ Plot the DBCM traces in a new figure.
+        """
+        logger.info("Plotting DBCM traces...")
+        print(dbcm_df)
+
+    def on_normalize_bcm_traces(self, bcm_fscale_map: dict):
+        """ Normalize the BCM traces with FSCALE data for comparable.
+        """
+        to_norm = self.bcm_norm_toggle_var.get()
+        if to_norm:
+            logger.info("Normalizing BCM traces with FSCALE data")
+            print(bcm_fscale_map)
+        else:
+            logger.info("Show BCM raw traces")
 
     def find_first_valid_t(self) -> int:
         """ Find the first t value that corresponding phase values are all valid for all phase

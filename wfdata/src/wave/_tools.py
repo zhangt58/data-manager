@@ -338,14 +338,18 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
             n_figs = n_data_filepaths
         #
         fig_with_titles = []
+        dbcm_dfs: list[pd.DataFrame] = []
+        bcm_fscale_maps: list[dict] = []
         for data_filepath in args.data_filepath[:n_figs]:
             _pth = Path(data_filepath)
-            fig = create_plot(_pth, args.is_opt, t_range)
+            fig, df_dbcm, bcm_fscale_map = create_plot(_pth, args.is_opt, t_range)
             if fig is None:
                 continue
             fig.canvas.manager.set_window_title(f"Figure {_pth.name}")
             fig.tight_layout()
             fig_with_titles.append((fig, _pth.name))
+            dbcm_dfs.append(df_dbcm)
+            bcm_fscale_maps.append(bcm_fscale_map)
 
         fig_grid = args.fig_grid
         if fig_grid is None:
@@ -360,7 +364,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                             (nrow, ncol),
                             notes=f"[{datetime.now().isoformat()[:-3]}] "
                                   f"Generated with the command: {' '.join(sys.argv)}",
-                            fig_dpi=args.fig_dpi, theme_name=args.theme_name)
+                            fig_dpi=args.fig_dpi, theme_name=args.theme_name,
+                            dbcm_dfs=dbcm_dfs, bcm_fscale_maps=bcm_fscale_maps)
         _app.mainloop()
         sys.exit(0)
 
@@ -476,8 +481,11 @@ def create_plot(data_filepath: Path, is_opt: bool = False,
     """
     df, t0_s = read_data(data_filepath, t_range, is_opt)
     if df is None:
-        return None
-    return plot(df, t0_s, data_filepath.name)
+        return None, None
+    # raw DBCM data:
+    df_dbcm = df[[c for c in df.columns if c.startswith('DBCM')]]
+    bcm_fscale_map = df.attrs.get('BCM-FSCALE', None)
+    return plot(df, t0_s, data_filepath.name), df_dbcm, bcm_fscale_map
 
 
 if __name__ == "__main__":
