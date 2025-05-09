@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import cmath
+import json
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
@@ -116,7 +117,15 @@ def read_data(filepath: Union[str, Path],
         # read the converted file, smaller size.
         with pd.HDFStore(filepath, mode="r") as store:
             t0_s = store.get_storer('TimeWindow').attrs.t_zero
+            # BCM-FSCALE
+            bcm_fscale_map = None
+            if '/BCM' in store.keys():
+                attrs = store.get_storer('BCM').attrs
+                if 'fscale_json' in attrs:
+                    bcm_fscale_map = json.loads(attrs.fscale_json)
             df_all = pd.concat([store[k] for k in store.keys()], axis=1)
+            if bcm_fscale_map is not None:
+                df_all.attrs['BCM-FSCALE'] = bcm_fscale_map
         #
         t0_idx: int = (df_all["t_us"]==0.0).argmax()
         if t_range is not None:
