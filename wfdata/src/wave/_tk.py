@@ -225,17 +225,24 @@ class FigureWindow(tk.Toplevel):
                 command=partial(self.on_normalize_bcm_traces, bcm_fscale_map,
                                 figure, ax_bcm)
         )
-        plot_dbcm_btn = ttk.Button(bcm_ctrl_frame, text="DBCM", width=5,
-                command=partial(self.on_plot_diff_bcm_traces, dbcm_df)
+        self.show_as_dbcm_toggle_var = tk.BooleanVar(value=False)
+        show_as_dbcm_chkbox = ttk.Checkbutton(bcm_ctrl_frame,
+                text="DBCM", width=5,
+                variable=self.show_as_dbcm_toggle_var,
+                command=partial(self.on_plot_diff_bcm_traces,
+                                figure, ax_bcm)
         )
         if dbcm_df is None or dbcm_df.empty:
-            plot_dbcm_btn.config(state="disabled")
+            show_as_dbcm_chkbox.config(state="disabled")
+        else:
+            self.dbcm_df = dbcm_df
+            self.dbcm_plots = None
         if bcm_fscale_map is None or not bcm_fscale_map:
             bcm_norm_toggle_chkbox.config(state="disabled")
         #
         bcm_ctrl_lbl.pack(side=tk.LEFT, padx=2)
         bcm_norm_toggle_chkbox.pack(side=tk.LEFT, padx=2)
-        plot_dbcm_btn.pack(side=tk.RIGHT, padx=2)
+        show_as_dbcm_chkbox.pack(side=tk.RIGHT, padx=2)
 
         # yaxis_frame
         # add a button to adjust auto scale Y limits
@@ -283,11 +290,64 @@ class FigureWindow(tk.Toplevel):
         sub_pha_txt1.insert(0, str(t_0))
         sub_pha_txt2.insert(0, str(t_0 + 10))
 
-    def on_plot_diff_bcm_traces(self, dbcm_df: pd.DataFrame):
+    def save_bcm_plot(self, ax):
+        """ Save BCM plot.
+        """
+        self.bcm_plots = []
+        for l in ax.get_lines():
+            self.bcm_plots.append((
+                l.get_label(), l.get_lw(), l.get_ds(), l.get_color(),
+                l.get_xdata(), l.get_ydata()
+            ))
+
+    def restore_bcm_plot(self, fig, ax):
+        """ Restore BCM plot
+        """
+        ax.lines.clear()
+        for name, lw, ds, color, xdata, ydata in self.bcm_plots:
+            ax.plot(xdata, ydata, label=name, color=color, lw=lw, ds=ds)
+        _auto_scale_y(ax)
+        fig.canvas.draw_idle()
+
+    def save_dbcm_plot(self, ax):
+        """ Save DBCM plot.
+        """
+        self.dbcm_plots = []
+        for l in ax.get_lines():
+            self.dbcm_plots.append((
+                l.get_label(), l.get_lw(), l.get_ds(), l.get_color(),
+                l.get_xdata(), l.get_ydata()
+            ))
+
+    def restore_dbcm_plot(self, fig, ax):
+        """ Restore or plot DBCM plot.
+        """
+        ax.lines.clear()
+        if self.dbcm_plots is None:
+            # create new
+            _, lw, ds, _, xdata, _ = self.bcm_plots[0]
+            for name, d in self.dbcm_df.items():
+                ax.plot(xdata, d.to_numpy(), label=name, lw=lw, ds=ds)
+        else:
+            for name, lw, ds, color, xdata, ydata in self.dbcm_plots:
+                ax.plot(xdata, ydata, label=name, color=color, lw=lw, ds=ds)
+        _auto_scale_y(ax)
+        fig.canvas.draw_idle()
+
+    def on_plot_diff_bcm_traces(self, fig, ax):
         """ Plot the DBCM traces in a new figure.
         """
-        logger.info("Plotting DBCM traces...")
-        print(dbcm_df)
+        show_dbcm = self.show_as_dbcm_toggle_var.get()
+        if show_dbcm:
+            logger.info("Plotting DBCM traces...")
+            self.save_bcm_plot(ax)
+            self.restore_dbcm_plot(fig, ax)
+            fig.canvas.draw_idle()
+        else:
+            logger.info("Plotting BCM traces...")
+            self.save_dbcm_plot(ax)
+            self.restore_bcm_plot(fig, ax)
+
 
     def on_normalize_bcm_traces(self, bcm_fscale_map: dict, fig, ax):
         """ Normalize the BCM traces with FSCALE data for comparable.
