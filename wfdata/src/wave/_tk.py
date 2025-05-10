@@ -7,6 +7,7 @@ from functools import (
     partial,
     reduce
 )
+from itertools import cycle
 from tkinter import (
     ttk,
     messagebox
@@ -18,6 +19,20 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.text import Text
 
 from ._log import logger
+
+# matplotlib.pyplot.rcParams['axes.prop_cycle']
+_LINE_COLORS = [
+    '#1f77b4',
+    '#ff7f0e',
+    '#2ca02c',
+    '#d62728',
+    '#9467bd',
+    '#8c564b',
+    '#e377c2',
+    '#7f7f7f',
+    '#bcbd22',
+    '#17becf'
+]
 
 
 class FigureWindow(tk.Toplevel):
@@ -310,6 +325,7 @@ class FigureWindow(tk.Toplevel):
         ax.lines.clear()
         for name, lw, ds, color, xdata, ydata in self.bcm_plots:
             ax.plot(xdata, ydata, label=name, color=color, lw=lw, ds=ds)
+        ax.legend()
         _auto_scale_y(ax)
         fig.canvas.draw_idle()
 
@@ -330,11 +346,13 @@ class FigureWindow(tk.Toplevel):
         if self.dbcm_plots is None:
             # create new
             _, lw, ds, _, xdata, _ = self.bcm_plots[0]
+            cc = cycle(_LINE_COLORS)
             for name, d in self.dbcm_df.items():
-                ax.plot(xdata, d.to_numpy(), label=name, lw=lw, ds=ds)
+                ax.plot(xdata, d.to_numpy(), label=name, color=next(cc), lw=lw, ds=ds)
         else:
             for name, lw, ds, color, xdata, ydata in self.dbcm_plots:
                 ax.plot(xdata, ydata, label=name, color=color, lw=lw, ds=ds)
+        ax.legend()
         _auto_scale_y(ax)
         fig.canvas.draw_idle()
 
@@ -348,7 +366,6 @@ class FigureWindow(tk.Toplevel):
             logger.info("Plotting DBCM traces...")
             self.save_bcm_plot(ax)
             self.restore_dbcm_plot(fig, ax)
-            fig.canvas.draw_idle()
             self.bcm_ctrl_lbl.config(text="DBCM", foreground="red")
         else:
             # enable norm bcm checkbox
@@ -357,6 +374,7 @@ class FigureWindow(tk.Toplevel):
             self.save_dbcm_plot(ax)
             self.restore_bcm_plot(fig, ax)
             self.bcm_ctrl_lbl.config(text="BCM RAW", foreground="black")
+        self.on_toggle_legends(fig)
 
     def on_normalize_bcm_traces(self, bcm_fscale_map: dict, fig, ax):
         """ Normalize the BCM traces with FSCALE data for comparable.
