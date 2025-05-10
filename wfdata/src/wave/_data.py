@@ -203,7 +203,7 @@ def read_data(filepath: Union[str, Path],
     if bcm_fscale_map is not None:
         logger.info(f"Generating DBCM dataset...")
         logger.debug(f"Got BCM FSCALE data: {bcm_fscale_map}")
-        _generate_dbcm_inplace(df.copy(), bcm_fscale_map)
+        _generate_dbcm_inplace(df, bcm_fscale_map)
         # attach the fscale data
         df.attrs['BCM-FSCALE'] = bcm_fscale_map
 
@@ -308,7 +308,8 @@ def plot(df: pd.DataFrame, t0: str, title: str, **kws):
 
 
 def _generate_dbcm_inplace(df: pd.DataFrame, bcm_fscale_map: dict) -> None:
-    """ Generate and add as new columns as the DBCM data, with the given BCM FSCALE data.
+    """ Generate and add the DBCM data columns to the original dataframe,
+    with the given BCM FSCALE data.
     """
     # x1 := BCM_D1120, f1 := bcm_fscal_map[...], f1c := ...<copy>...
     # x2 := BCM_D2183
@@ -326,21 +327,22 @@ def _generate_dbcm_inplace(df: pd.DataFrame, bcm_fscale_map: dict) -> None:
     f4 = bcm_fscale_map["FS1_BMS:BCM_D2519:FSCALE_CSET"]
     f5 = bcm_fscale_map["BDS_BTS:BCM_D5521:FSCALE_CSET"]
 
+    dfc = df.copy()
     # the scaled waveform
-    s1 = df.get('BCM_D1120', None)
+    s1 = dfc.get('BCM_D1120', None)
     if s1 is not None:
         s1c = s1 * f1c
         s1 *= f1
-    s2 = df.get('BCM_D2183', None)
+    s2 = dfc.get('BCM_D2183', None)
     if s2 is not None:
         s2 *= f2
-    s3 = df.get('BCM_D2264', None)
+    s3 = dfc.get('BCM_D2264', None)
     if s3 is not None:
         s3 *= f3
-    s4 = df.get('BCM_D2519', None)
+    s4 = dfc.get('BCM_D2519', None)
     if s4 is not None:
         s4 *= f4
-    s5 = df.get('BCM_D5521', None)
+    s5 = dfc.get('BCM_D5521', None)
     if s5 is not None:
         s5 *= f5
 
