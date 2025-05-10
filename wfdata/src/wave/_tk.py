@@ -7,6 +7,7 @@ from functools import (
     partial,
     reduce
 )
+from itertools import cycle
 from tkinter import (
     ttk,
     messagebox
@@ -18,6 +19,20 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.text import Text
 
 from ._log import logger
+
+# matplotlib.pyplot.rcParams['axes.prop_cycle']
+_LINE_COLORS = [
+    '#1f77b4',
+    '#ff7f0e',
+    '#2ca02c',
+    '#d62728',
+    '#9467bd',
+    '#8c564b',
+    '#e377c2',
+    '#7f7f7f',
+    '#bcbd22',
+    '#17becf'
+]
 
 
 class FigureWindow(tk.Toplevel):
@@ -236,6 +251,9 @@ class FigureWindow(tk.Toplevel):
                                 figure, ax_bcm)
         )
         self.show_as_dbcm_chkbox = show_as_dbcm_chkbox
+         # button for hints
+        bcm_help_btn = ttk.Button(bcm_ctrl_frame, text="?", width=2,
+                                  command=partial(self.on_help_bcm_controls, bcm_fscale_map))
         if dbcm_df is None or dbcm_df.empty:
             show_as_dbcm_chkbox.config(state="disabled")
         else:
@@ -243,8 +261,10 @@ class FigureWindow(tk.Toplevel):
             self.dbcm_plots = None
         if bcm_fscale_map is None or not bcm_fscale_map:
             bcm_norm_toggle_chkbox.config(state="disabled")
+            bcm_help_btn.config(state="disabled")
         #
         bcm_ctrl_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        bcm_help_btn.pack(side=tk.RIGHT, padx=2)
         bcm_norm_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
         show_as_dbcm_chkbox.pack(side=tk.RIGHT, padx=2)
 
@@ -310,8 +330,7 @@ class FigureWindow(tk.Toplevel):
         ax.lines.clear()
         for name, lw, ds, color, xdata, ydata in self.bcm_plots:
             ax.plot(xdata, ydata, label=name, color=color, lw=lw, ds=ds)
-        _auto_scale_y(ax)
-        fig.canvas.draw_idle()
+        ax.legend()
 
     def save_dbcm_plot(self, ax):
         """ Save DBCM plot.
@@ -330,33 +349,36 @@ class FigureWindow(tk.Toplevel):
         if self.dbcm_plots is None:
             # create new
             _, lw, ds, _, xdata, _ = self.bcm_plots[0]
+            cc = cycle(_LINE_COLORS)
             for name, d in self.dbcm_df.items():
-                ax.plot(xdata, d.to_numpy(), label=name, lw=lw, ds=ds)
+                ax.plot(xdata, d.to_numpy(), label=name, color=next(cc), lw=lw, ds=ds)
         else:
             for name, lw, ds, color, xdata, ydata in self.dbcm_plots:
                 ax.plot(xdata, ydata, label=name, color=color, lw=lw, ds=ds)
-        _auto_scale_y(ax)
-        fig.canvas.draw_idle()
+        ax.legend()
 
     def on_plot_diff_bcm_traces(self, fig, ax):
-        """ Plot the DBCM traces in a new figure.
+        """ Switching the plot view between BCM and DBCM.
         """
         show_dbcm = self.show_as_dbcm_toggle_var.get()
         if show_dbcm:
             # disable norm bcm checkbox
             self.bcm_norm_toggle_chkbox.config(state="disabled")
-            logger.info("Plotting DBCM traces...")
+            logger.info("Showing DBCM traces...")
             self.save_bcm_plot(ax)
             self.restore_dbcm_plot(fig, ax)
-            fig.canvas.draw_idle()
             self.bcm_ctrl_lbl.config(text="DBCM", foreground="red")
         else:
             # enable norm bcm checkbox
             self.bcm_norm_toggle_chkbox.config(state="normal")
-            logger.info("Plotting BCM traces...")
+            logger.info("Showing BCM traces...")
             self.save_dbcm_plot(ax)
             self.restore_bcm_plot(fig, ax)
             self.bcm_ctrl_lbl.config(text="BCM RAW", foreground="black")
+        _auto_scale_y(ax)
+        self.on_toggle_legends(fig)
+        self.on_update_lw(fig)
+        self.on_ds_changed(fig, None)
 
     def on_normalize_bcm_traces(self, bcm_fscale_map: dict, fig, ax):
         """ Normalize the BCM traces with FSCALE data for comparable.
@@ -367,13 +389,13 @@ class FigureWindow(tk.Toplevel):
             self.show_as_dbcm_chkbox.config(state="disabled")
             logger.info(f"Normalizing BCM traces with FSCALE data)")
             for l, y0, sf in zip(ax.get_lines(), self.bcm_ydata0, self.bcm_fscales):
-                logger.info(f"Scale trace {l.get_label()} by x{sf}")
+                logger.info(f"Scale raw BCM trace '{l.get_label()}' by {sf:.6g}X")
                 l.set_ydata(y0 * sf)
             self.bcm_ctrl_lbl.config(text="BCM NORM", foreground="blue")
         else:
             # enable DBCM show checkbox
             self.show_as_dbcm_chkbox.config(state="normal")
-            logger.info("Show BCM raw traces")
+            logger.info("Showing BCM raw traces...")
             for l, y0 in zip(ax.get_lines(), self.bcm_ydata0):
                 l.set_ydata(y0)
             self.bcm_ctrl_lbl.config(text="BCM RAW", foreground="black")
@@ -501,11 +523,27 @@ class FigureWindow(tk.Toplevel):
                 _tklbl.set_fontsize(new_fs[2])
         fig.canvas.draw_idle()
 
+    def on_help_bcm_controls(self, bcm_fscale_map: dict):
+        """ Show the help messages for BCM/DBCM traces.
+        """
+        fscale_s = '\n'.join([f'{k} -> {v}' for k, v in bcm_fscale_map.items()])
+        msg_text = f"""💡 The raw BCM traces are displayed initially.
+💡 Check the 'Normalize' checkbox to scale the raw BCM traces with FSCALE factors (see the end).
+💡 Uncheck the 'Normalize' checkbox to revert to the raw BCM view.
+💡 Check the 'DBCM' checkbox to switch to the view of DBCM traces.
+💡 Uncheck the 'DBCM' checkbox to switch to the view of raw BCM traces.
+💡 The DBCM view is only checkable when 'Normalize' is not checked.
+💡 The FSCALE factors used in current dataset: {fscale_s}"""
+        messagebox.showinfo(title="FigureWindow - Help (BCM/DBCM)",
+                message="BCM/DBCM Traces Explained:",
+                detail=msg_text,
+                type=messagebox.OK)
+
     def on_help_figure_controls(self):
         """ Show the help messages for the controls.
         """
-        msg_text = """* Diff mode: each trace - Ref.Φ, click ΔΦ button
-* Original mode: original trace, click Φ button
+        msg_text = """💡 Diff mode: each trace - Ref.Φ, click ΔΦ button
+💡 Original mode: original trace, click Φ button
 
 Compute the reference phase (Ref.Φ) of each trace requires the input of time (T) range
 in the two entries, each is an integer as time in μs, put them in ascending
@@ -516,7 +554,7 @@ The two values of T range are initialized with the first valid time (T1) and the
 it (T2). Note that for the raw dataset, the initial values are computed such that for all
 traces, at the assigned T1, phase values are all valid; otherwise, fall back to
 the first element of the time array."""
-        messagebox.showinfo(title="FigureWindow - Help",
+        messagebox.showinfo(title="FigureWindow - Help (BPM Phase)",
                 message="Presenting Phase Traces: Diff & Original Modes",
                 detail=msg_text,
                 type=messagebox.OK)
