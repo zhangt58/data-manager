@@ -251,6 +251,9 @@ class FigureWindow(tk.Toplevel):
                                 figure, ax_bcm)
         )
         self.show_as_dbcm_chkbox = show_as_dbcm_chkbox
+         # button for hints
+        bcm_help_btn = ttk.Button(bcm_ctrl_frame, text="?", width=2,
+                                  command=partial(self.on_help_bcm_controls, bcm_fscale_map))
         if dbcm_df is None or dbcm_df.empty:
             show_as_dbcm_chkbox.config(state="disabled")
         else:
@@ -258,8 +261,10 @@ class FigureWindow(tk.Toplevel):
             self.dbcm_plots = None
         if bcm_fscale_map is None or not bcm_fscale_map:
             bcm_norm_toggle_chkbox.config(state="disabled")
+            bcm_help_btn.config(state="disabled")
         #
         bcm_ctrl_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        bcm_help_btn.pack(side=tk.RIGHT, padx=2)
         bcm_norm_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
         show_as_dbcm_chkbox.pack(side=tk.RIGHT, padx=2)
 
@@ -518,11 +523,27 @@ class FigureWindow(tk.Toplevel):
                 _tklbl.set_fontsize(new_fs[2])
         fig.canvas.draw_idle()
 
+    def on_help_bcm_controls(self, bcm_fscale_map: dict):
+        """ Show the help messages for BCM/DBCM traces.
+        """
+        fscale_s = '\n'.join([f'{k} -> {v}' for k, v in bcm_fscale_map.items()])
+        msg_text = f"""💡 The raw BCM traces are displayed initially.
+💡 Check the 'Normalize' checkbox to scale the raw BCM traces with FSCALE factors (see the end).
+💡 Uncheck the 'Normalize' checkbox to revert to the raw BCM view.
+💡 Check the 'DBCM' checkbox to switch to the view of DBCM traces.
+💡 Uncheck the 'DBCM' checkbox to switch to the view of raw BCM traces.
+💡 The DBCM view is only checkable when 'Normalize' is not checked.
+💡 The FSCALE factors used in current dataset: {fscale_s}"""
+        messagebox.showinfo(title="FigureWindow - Help (BCM/DBCM)",
+                message="BCM/DBCM Traces Explained:",
+                detail=msg_text,
+                type=messagebox.OK)
+
     def on_help_figure_controls(self):
         """ Show the help messages for the controls.
         """
-        msg_text = """* Diff mode: each trace - Ref.Φ, click ΔΦ button
-* Original mode: original trace, click Φ button
+        msg_text = """💡 Diff mode: each trace - Ref.Φ, click ΔΦ button
+💡 Original mode: original trace, click Φ button
 
 Compute the reference phase (Ref.Φ) of each trace requires the input of time (T) range
 in the two entries, each is an integer as time in μs, put them in ascending
@@ -533,7 +554,7 @@ The two values of T range are initialized with the first valid time (T1) and the
 it (T2). Note that for the raw dataset, the initial values are computed such that for all
 traces, at the assigned T1, phase values are all valid; otherwise, fall back to
 the first element of the time array."""
-        messagebox.showinfo(title="FigureWindow - Help",
+        messagebox.showinfo(title="FigureWindow - Help (BPM Phase)",
                 message="Presenting Phase Traces: Diff & Original Modes",
                 detail=msg_text,
                 type=messagebox.OK)
