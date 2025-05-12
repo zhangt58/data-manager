@@ -33,6 +33,28 @@ BCM_FSCALE_NAME_MAP = {
     "BCM_D1120c": "FE_COPY:BCM_D1120:FSCALE_CSET",
 }
 
+# the default BCM/DBCM trace visibility
+BCM_TRACE_VIS_MAP = {
+    "BCM_D0989": True,
+    "BCM_D1120": True,
+    "BCM_D2183": True,
+    "BCM_D2264": True,
+    "BCM_D2519": True,
+    "BCM_D2675": True,
+    "BCM_D3936": True,
+    "BCM_D4169": False,
+    "BCM_D5521": True,
+    "BCM_D5789": True,
+    "BCM_D1120c": True,
+    # DBCM
+    "DBCM_LS1TRANS": True,
+    "DBCM_CHRGSTAT": True,
+    "DBCM_STRPEFF": True,
+    "DBCM_LS2TRANS": True,
+    "DBCM_LS3TRANS": False,
+    "DBCM_LINACBDS": True,
+    "DBCM_LINACTGT": True,
+}
 
 # the datafiles (v1) with datetime before defined should be fixed
 # BCM_D1120 -> BCM_D1120c
