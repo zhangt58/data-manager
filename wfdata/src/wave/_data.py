@@ -18,6 +18,19 @@ DEFAULT_MPL_FONT_SIZE = mpl.rcParams['font.size']
 DEFAULT_MPL_FONT_FAMILY = mpl.rcParams['font.family']
 DEFAULT_MPL_FIG_DPI = mpl.rcParams['figure.dpi']
 
+BCM_FSCALE_NAME_MAP = {
+    "BCM_D1120": "FE_MEBT:BCM_D1120:FSCALE_CSET",
+    "BCM_D2183": "FS1_CSS:BCM_D2183:FSCALE_CSET",
+    "BCM_D2264": "FS1_CSS:BCM_D2264:FSCALE_CSET",
+    "BCM_D2519": "FS1_BMS:BCM_D2519:FSCALE_CSET",
+    "BCM_D2675": "FS1_BMS:BCM_D2675:FSCALE_CSET",
+    "BCM_D3936": "FS2_BTS:BCM_D3936:FSCALE_CSET",
+    "BCM_D4169": "FS2_BBS:BCM_D4169:FSCALE_CSET",
+    "BCM_D5521": "BDS_BTS:BCM_D5521:FSCALE_CSET",
+    "BCM_D5789": "BDS_FFS:BCM_D5789:FSCALE_CSET",
+    "BCM_D1120c": "FE_COPY:BCM_D1120:FSCALE_CSET",
+}
+
 
 def _process_format_v0(store):
     logger.debug(f"Processing {store.filename} (v0 raw)...")
@@ -311,6 +324,16 @@ def _generate_dbcm_inplace(df: pd.DataFrame, bcm_fscale_map: dict) -> None:
     """ Generate and add the DBCM data columns to the original dataframe,
     with the given BCM FSCALE data.
     """
+    n1 = "BCM_D1120"
+    n2 = "BCM_D2183"
+    n3 = "BCM_D2264"
+    n4 = "BCM_D2519"
+    n5 = "BCM_D2675"
+    n6 = "BCM_D3936"
+    n7 = "BCM_D4169"
+    n8 = "BCM_D5521"
+    n9 = "BCM_D5789"
+    n1c = "BCM_D1120c"
     # s1 := BCM_D1120, f1 := bcm_fscal_map[...]
     # s2 := BCM_D2183
     # s3 := BCM_D2264
@@ -329,52 +352,52 @@ def _generate_dbcm_inplace(df: pd.DataFrame, bcm_fscale_map: dict) -> None:
     # d5 := DBCM_LS3TRANS (D4169 - D5521) = s7 * f7 - s8 * f8
     # d6 := DBCM_LINACBDS (D1120c - D5521) = s1c *f1c - s8 * f8
     # d7 := DBCM_LINACTGT (D1120c - D5789) = s1c * f1c - s9 * f9
-    f1 = bcm_fscale_map['FE_MEBT:BCM_D1120:FSCALE_CSET']
-    f2 = bcm_fscale_map["FS1_CSS:BCM_D2183:FSCALE_CSET"]
-    f3 = bcm_fscale_map["FS1_CSS:BCM_D2264:FSCALE_CSET"]
-    f4 = bcm_fscale_map["FS1_BMS:BCM_D2519:FSCALE_CSET"]
-    f5 = bcm_fscale_map["FS1_BMS:BCM_D2675:FSCALE_CSET"]
-    f6 = bcm_fscale_map["FS2_BTS:BCM_D3936:FSCALE_CSET"]
-    f7 = bcm_fscale_map["FS2_BBS:BCM_D4169:FSCALE_CSET"]
-    f8 = bcm_fscale_map["BDS_BTS:BCM_D5521:FSCALE_CSET"]
-    f9 = bcm_fscale_map["BDS_FFS:BCM_D5789:FSCALE_CSET"]
-    f1c = bcm_fscale_map['FE_COPY:BCM_D1120:FSCALE_CSET']
+    f1 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n1]]
+    f2 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n2]]
+    f3 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n3]]
+    f4 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n4]]
+    f5 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n5]]
+    f6 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n6]]
+    f7 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n7]]
+    f8 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n8]]
+    f9 = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n9]]
+    f1c = bcm_fscale_map[BCM_FSCALE_NAME_MAP[n1c]]
 
     dfc = df.copy()
     # the scaled waveform
-    s1 = dfc.get('BCM_D1120') * f1 if 'BCM_D1120' in dfc else None
-    s2 = dfc.get('BCM_D2183') * f2 if 'BCM_D2183' in dfc else None
-    s3 = dfc.get('BCM_D2264') * f3 if 'BCM_D2264' in dfc else None
-    s4 = dfc.get('BCM_D2519') * f4 if 'BCM_D2519' in dfc else None
-    s5 = dfc.get('BCM_D2675') * f5 if 'BCM_D2675' in dfc else None
-    s6 = dfc.get('BCM_D3936') * f6 if 'BCM_D3936' in dfc else None
-    s7 = dfc.get('BCM_D4169') * f7 if 'BCM_D4169' in dfc else None
-    s8 = dfc.get('BCM_D5521') * f8 if 'BCM_D5521' in dfc else None
-    s9 = dfc.get('BCM_D5789') * f9 if 'BCM_D5789' in dfc else None
-    s1c = dfc.get('BCM_D1120c') * f1c if 'BCM_D1120c' in dfc else None
+    s1 = dfc.get(n1) * f1 if n1 in dfc else None
+    s2 = dfc.get(n2) * f2 if n2 in dfc else None
+    s3 = dfc.get(n3) * f3 if n3 in dfc else None
+    s4 = dfc.get(n4) * f4 if n4 in dfc else None
+    s5 = dfc.get(n5) * f5 if n5 in dfc else None
+    s6 = dfc.get(n6) * f6 if n6 in dfc else None
+    s7 = dfc.get(n7) * f7 if n7 in dfc else None
+    s8 = dfc.get(n8) * f8 if n8 in dfc else None
+    s9 = dfc.get(n9) * f9 if n9 in dfc else None
+    s1c = dfc.get(n1c) * f1c if n1c in dfc else None
 
     # dbcm
     if s1 is not None and s2 is not None:
         df['DBCM_LS1TRANS'] = s1 - s2
-        logger.debug("Added DBCM_LS1TRANS: D1120 - D2183")
+        logger.debug(f"Added DBCM_LS1TRANS: {n1} - {n2}")
     if s2 is not None and s3 is not None:
         df['DBCM_CHRGSTAT'] = s2 - s3
-        logger.debug("Added DBCM_CHRGSTAT: D2183 - D2264")
+        logger.debug(f"Added DBCM_CHRGSTAT: {n2} - {n3}")
     if s3 is not None and s4 is not None:
         df['DBCM_STRPEFF'] = s3 - s4
-        logger.debug("Added DBCM_STRPEFF: D2264 - D2519")
+        logger.debug(f"Added DBCM_STRPEFF: {n3} - {n4}")
     if s5 is not None and s6 is not None:
         df['DBCM_LS2TRANS'] = s5 - s6
-        logger.debug("Added DBCM_LS2TRANS: D2675 - D3936")
+        logger.debug(f"Added DBCM_LS2TRANS: {n5} - {n6}")
     if s7 is not None and s8 is not None:
         df['DBCM_LS3TRANS'] = s7 - s8
-        logger.debug("Added DBCM_LS3TRANS: D4169 - D5521")
+        logger.debug(f"Added DBCM_LS3TRANS: {n7} - {n8}")
     if s1c is not None and s8 is not None:
         df['DBCM_LINACBDS'] = s1c - s8
-        logger.debug("Added DBCM_LINACBDS: D1120c - D5521")
+        logger.debug(f"Added DBCM_LINACBDS: {n1c} - {n8}")
     if s1c is not None and s9 is not None:
         df['DBCM_LINACTGT'] = s1c - s9
-        logger.debug("Added DBCM_LINACBDS: D1120c - D5789")
+        logger.debug(f"Added DBCM_LINACTGT: {n1c} - {n9}")
 
 
 if __name__ == "__main__":
