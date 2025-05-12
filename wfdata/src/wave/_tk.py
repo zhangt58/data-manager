@@ -221,8 +221,8 @@ class FigureWindow(tk.Toplevel):
                 ax_bcm = ax
                 for l in ax.get_lines():
                     name = l.get_label()
-                    if name in BCM_FSCALE_NAME_MAP:
-                        self.bcm_fscales.append(bcm_fscale_map[BCM_FSCALE_NAME_MAP[name]])
+                    _fs = bcm_fscale_map[BCM_FSCALE_NAME_MAP[name]]
+                    self.bcm_fscales.append(_fs)
                     self.bcm_ydata0.append(l.get_ydata())
 
             sync_btn = ttk.Button(xaxis_frame, text=f"{i}", width=3,

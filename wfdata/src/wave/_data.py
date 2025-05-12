@@ -279,7 +279,7 @@ def plot(df: pd.DataFrame, t0: str, title: str, **kws):
         if df[bcm_cols].isna().all().all():
             _plot_no_data(ax1, "All NaN")
         else:
-            df.plot(x='t_us', y=bcm_cols, ax=ax1, xlabel="")
+            df.plot(x='t_us', y=bcm_cols, ax=ax1, xlabel="", alpha=0.85)
     else:
         # show NO DATA
         _plot_no_data(ax1)
@@ -291,7 +291,7 @@ def plot(df: pd.DataFrame, t0: str, title: str, **kws):
     ax1r = ax1.twinx()
     npermit_col = [c for c in df.columns if c.endswith('NPERMIT')][0]
     df.plot(x='t_us', y=npermit_col, c='#2C3E50', ls='-.', lw=1, ax=ax1r,
-            label=npermit_col, ylim=(-0.2, 1.2))
+            label=npermit_col, ylim=(-0.2, 1.2), alpha=0.85)
     ax1r.set_ylabel("NPERMIT")
     ax1r.legend(loc="lower left")
 
@@ -302,14 +302,14 @@ def plot(df: pd.DataFrame, t0: str, title: str, **kws):
         if df[bpm_amp_cols].isna().all().all():
             _plot_no_data(ax2, "All NaN")
         else:
-            df.plot(x='t_us', y=bpm_amp_cols, ax=ax2, xlabel="")
+            df.plot(x='t_us', y=bpm_amp_cols, ax=ax2, xlabel="", alpha=0.85)
     else:
         _plot_no_data(ax2)
     if bpm_pha_cols:
         if df[bpm_pha_cols].isna().all().all():
             _plot_no_data(ax3, "All NaN")
         else:
-            df.plot(x='t_us', y=bpm_pha_cols, ax=ax3)
+            df.plot(x='t_us', y=bpm_pha_cols, ax=ax3, alpha=0.85)
     else:
         _plot_no_data(ax3)
     ax2.set_ylabel("Magnitude [mVpp]")
