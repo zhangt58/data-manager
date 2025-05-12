@@ -8,6 +8,7 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Union
@@ -19,6 +20,7 @@ DEFAULT_MPL_FONT_FAMILY = mpl.rcParams['font.family']
 DEFAULT_MPL_FIG_DPI = mpl.rcParams['figure.dpi']
 
 BCM_FSCALE_NAME_MAP = {
+    "BCM_D0989": "FE_LEBT:BCM_D0989:FSCALE_CSET",
     "BCM_D1120": "FE_MEBT:BCM_D1120:FSCALE_CSET",
     "BCM_D2183": "FS1_CSS:BCM_D2183:FSCALE_CSET",
     "BCM_D2264": "FS1_CSS:BCM_D2264:FSCALE_CSET",
@@ -30,6 +32,12 @@ BCM_FSCALE_NAME_MAP = {
     "BCM_D5789": "BDS_FFS:BCM_D5789:FSCALE_CSET",
     "BCM_D1120c": "FE_COPY:BCM_D1120:FSCALE_CSET",
 }
+
+
+# the datafiles (v1) with datetime before defined should be fixed
+# BCM_D1120 -> BCM_D1120c
+# BCM_D2183 -> BCM_D0989
+DATE_PRIOR_FIX = datetime(year=2025, month=5, day=12, hour=10)
 
 
 def _process_format_v0(store):
@@ -76,6 +84,8 @@ def _process_format_v1(store):
     # BCM FSCALE
     df_bcm_fscale = store['/bcm_fscale'] if '/bcm_fscale' in store else None
 
+    fix_bcm = _to_fix_bcm_dateset(store.filename)
+
     # BCM
     bcm_grps = df_grp.index[df_grp.index.str.startswith('BCM')]
     bcm_dfs = []
@@ -85,7 +95,11 @@ def _process_format_v1(store):
             if any(i not in df_bcm for i in df_grp[bcm_grp]):
                 logger.warning(f"Missing data: {df_grp[bcm_grp]} in {store.filename}")
                 continue
-            _bcm_df = df_bcm[df_grp[bcm_grp]]
+            if fix_bcm:
+                _bcm_df = df_bcm[df_grp[bcm_grp]].rename(
+                        columns={"BCM_D1120": "BCM_D1120c", "BCM_D2183": "BCM_D0989"})
+            else:
+                _bcm_df = df_bcm[df_grp[bcm_grp]]
             _t_idx = pd.date_range(start=df_t0[bcm_grp], periods=_bcm_df.shape[0], freq='us')
             bcm_dfs.append(_bcm_df.set_index(_t_idx))
         if df_bcm_fscale is not None:
@@ -398,6 +412,25 @@ def _generate_dbcm_inplace(df: pd.DataFrame, bcm_fscale_map: dict) -> None:
     if s1c is not None and s9 is not None:
         df['DBCM_LINACTGT'] = s1c - s9
         logger.debug(f"Added DBCM_LINACTGT: {n1c} - {n9}")
+
+
+def _to_fix_bcm_dateset(full_filename: str) -> bool:
+    """ Return if the BCM dataframe needs fix.
+    """
+    # for the datafile created before DATE_PRIOR_FIX, rename the BCM columns:
+    # - BCM_D1120 -> BCM_D1120c
+    # - BCM_D2183 -> BCM_D0989
+    try:
+        # get the date from the filename.
+        pth_name = Path(full_filename).name
+        created_date = datetime.strptime(pth_name[:15], "%Y%m%dT%H%M%S")
+    except Exception as e:
+        logger.warning(f"Failed get created date from filename {store.filename}.")
+        fix_bcm = False
+    else:
+        fix_bcm = created_date < DATE_PRIOR_FIX
+    logger.debug(f"To fix BCM of {full_filename}? {fix_bcm}")
+    return fix_bcm
 
 
 if __name__ == "__main__":
