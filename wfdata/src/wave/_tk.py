@@ -18,7 +18,10 @@ from matplotlib.backends.backend_tkagg import (
 )
 from matplotlib.text import Text
 
-from ._data import BCM_FSCALE_NAME_MAP
+from ._data import (
+    BCM_FSCALE_NAME_MAP,
+    BCM_TRACE_VIS_MAP,
+)
 from ._log import logger
 
 # matplotlib.pyplot.rcParams['axes.prop_cycle']
@@ -102,6 +105,8 @@ class FigureWindow(tk.Toplevel):
         #1 |phase   |          | Y-Axis |
         # figure frame
         # misc frame
+        # BCM trace visibility ctrl frame
+        # BPM trace visibility ctrl frame
         #
         tools_frame = ttk.Frame(frame)
         tools_frame.pack(fill=tk.X, padx=2, pady=2)
@@ -149,7 +154,8 @@ class FigureWindow(tk.Toplevel):
         # misc_frame (below figure frame)
         # other controls
         misc_frame = ttk.Frame(frame)
-        misc_frame.pack(fill=tk.X, padx=2, pady=2, side=tk.LEFT, expand=True)
+        misc_frame.pack(fill=tk.X, padx=2, pady=2)
+
         # lw
         lw_lbl = ttk.Label(misc_frame, text="Line Width")
         lw_sbox = ttk.Spinbox(misc_frame, from_=0.5, to=5, increment=0.5,
@@ -185,8 +191,18 @@ class FigureWindow(tk.Toplevel):
                 command=partial(self.on_toggle_legends, figure))
         legend_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
 
+        # visibility controls
+        hline = ttk.Separator(frame, orient="horizontal")
+        hline.pack(fill=tk.X, padx=2, pady=1)
+        self.bcm_vis_ctrl_frame = bcm_vis_ctrl_frame = ttk.Frame(frame)
+        bcm_vis_ctrl_frame.pack(fill=tk.X, padx=2, pady=2)
+        bpm_vis_ctrl_frame = ttk.Frame(frame)
+        bpm_vis_ctrl_frame.pack(fill=tk.X, padx=2, pady=2)
+
         # phase frame (variables)
         ax_pha = None
+        # mag
+        ax_mag = None
         # a list of np.ndarray/np.ma.MaskedArray of phase values
         self.pha0: list[Union[np.ndarray, np.ma.MaskedArray]] = []
         # time array of phase figure
@@ -224,6 +240,8 @@ class FigureWindow(tk.Toplevel):
                     _fs = bcm_fscale_map[BCM_FSCALE_NAME_MAP[name]]
                     self.bcm_fscales.append(_fs)
                     self.bcm_ydata0.append(l.get_ydata())
+            elif 'Magnitude' in ylbl:
+                ax_mag = ax
 
             sync_btn = ttk.Button(xaxis_frame, text=f"{i}", width=3,
                                   command=partial(sync_xlimits, figure, ax))
@@ -266,6 +284,11 @@ class FigureWindow(tk.Toplevel):
         bcm_help_btn.pack(side=tk.RIGHT, padx=2)
         bcm_norm_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
         show_as_dbcm_chkbox.pack(side=tk.RIGHT, padx=2)
+
+        # curve visibility controls
+        self._curve_vis_map: dict[str, tk.BooleanVar] = {}
+        self._create_bcm_vis_btns(bcm_vis_ctrl_frame, figure, ax_bcm)
+        self._create_bpm_vis_btns(bpm_vis_ctrl_frame, figure, ax_pha, ax_mag)
 
         # yaxis_frame
         # add a button to adjust auto scale Y limits
@@ -378,6 +401,8 @@ class FigureWindow(tk.Toplevel):
         self.on_toggle_legends(fig)
         self.on_update_lw(fig)
         self.on_ds_changed(fig, None)
+        # re-create vis control frame
+        self._create_bcm_vis_btns(self.bcm_vis_ctrl_frame, fig, ax)
 
     def on_normalize_bcm_traces(self, bcm_fscale_map: dict, fig, ax):
         """ Normalize the BCM traces with FSCALE data for comparable.
@@ -401,6 +426,52 @@ class FigureWindow(tk.Toplevel):
         _auto_scale_y(ax)
         fig.canvas.draw_idle()
 
+    def _create_bcm_vis_btns(self, frame, fig, ax):
+        for w in frame.winfo_children():
+            w.destroy()
+
+        def on_show(name, curve, fig):
+            curve.set_visible(self._curve_vis_map[name].get())
+            fig.canvas.draw_idle()
+
+        is_shown_dbcm_view = self.show_as_dbcm_toggle_var.get()
+        if is_shown_dbcm_view:
+            _text = "DBCM Trace"
+            _start_trim = 5
+        else:
+            _text = "BCM Trace"
+            _start_trim = 4
+
+        lbl = ttk.Label(frame, text=_text, width=10)
+        lbl.pack(side=tk.LEFT, padx=1)
+        for l in ax.get_lines():
+            name = l.get_label()
+            v = self._curve_vis_map.setdefault(
+                    name, tk.BooleanVar(value=BCM_TRACE_VIS_MAP.get(name, True)))
+            chkbox = ttk.Checkbutton(frame, text=name[_start_trim:], variable=v,
+                                     command=partial(on_show, name, l, fig))
+            chkbox.pack(side=tk.LEFT, padx=1)
+            if not v.get():
+                on_show(name, l, fig)
+                _auto_scale_y(ax)
+                fig.canvas.draw_idle()
+
+    def _create_bpm_vis_btns(self, frame, fig, ax_p, ax_m):
+        def on_show(name, curve1, curve2, fig):
+            is_shown = self._curve_vis_map[name].get()
+            curve1.set_visible(is_shown)
+            curve2.set_visible(is_shown)
+            fig.canvas.draw_idle()
+
+        lbl = ttk.Label(frame, text="BPM Trace", width=10)
+        lbl.pack(side=tk.LEFT, padx=1)
+
+        for l_p, l_m in zip(ax_p.get_lines(), ax_m.get_lines()):
+            name = l_p.get_label()[4:9]
+            v = self._curve_vis_map.setdefault(name, tk.BooleanVar(value=True))
+            chkbox = ttk.Checkbutton(frame, text=name, variable=v,
+                                     command=partial(on_show, name, l_p, l_m, fig))
+            chkbox.pack(side=tk.LEFT, padx=1)
 
     def find_first_valid_t(self) -> int:
         """ Find the first t value that corresponding phase values are all valid for all phase
