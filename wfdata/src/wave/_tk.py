@@ -293,6 +293,8 @@ class FigureWindow(tk.Toplevel):
         show_as_dbcm_chkbox.pack(side=tk.RIGHT, padx=2)
 
         # curve visibility controls
+        self._layout_win_map: dict = {'BCM': None, 'BPM': None}
+        self._layout_imgtk_map: dict = {'BCM': None, 'BPM': None}
         self._curve_vis_map: dict[str, tk.BooleanVar] = {}
         self._create_bcm_vis_btns(bcm_vis_ctrl_frame, figure, ax_bcm)
         self._create_bpm_vis_btns(bpm_vis_ctrl_frame, figure, ax_pha, ax_mag)
@@ -508,30 +510,42 @@ class FigureWindow(tk.Toplevel):
             self.img_tk = ImageTk.PhotoImage(img_resized)
             img_lbl.config(image=self.img_tk)
 
+        def _move_center(popup, parent, img_tk):
+            # parent window position and size
+            w, h = img_tk.width(), img_tk.height()
+            px, py = parent.winfo_x(), parent.winfo_y()
+            pw, ph = parent.winfo_width(), parent.winfo_height()
+            x = px + (pw - w) // 2
+            y = py + (ph - h) // 2
+            popup.geometry(f"{w}x{h}+{x}+{y}")
+
+        popup = self._layout_win_map.get(dev_type)
+        if popup is not None and popup.winfo_exists():
+            img_tk = self._layout_imgtk_map[dev_type]
+            _move_center(popup, self, img_tk)
+            popup.lift()
+            return
+
         if dev_type == "BCM":
             img_bytes = rc_bcm_image_bytes
         else:
             img_bytes = rc_bpm_image_bytes
 
         popup = tk.Toplevel()
+        self._layout_win_map[dev_type] = popup
         popup.title(f"Schematic overview for: {dev_type}")
         popup.resizable(False, False)  # Enable resizing
         img_lbl = ttk.Label(popup, anchor=tk.CENTER)
         img_lbl.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         img = Image.open(img_bytes)
-        self.img_tk = ImageTk.PhotoImage(img)
-        img_lbl.config(image=self.img_tk)
-        # popup.update_idletasks()
-        # parent window position and size
-        px, py = self.winfo_x(), self.winfo_y()
-        pw, ph = self.winfo_width(), self.winfo_height()
-        x = px + (pw - img.width) // 2
-        y = py + (ph - img.height) // 2
-        popup.geometry(f"{img.width}x{img.height}+{x}+{y}")
+        img_tk = ImageTk.PhotoImage(img)
+        img_lbl.config(image=img_tk)
+        self._layout_imgtk_map[dev_type] = img_tk
+        _move_center(popup, self, img_tk)
         # popup.bind("<Configure>", _resize)
-        popup.transient(self)
-        popup.grab_set()
-        popup.focus_force()
+        #popup.transient(self)
+        #popup.grab_set()
+        # popup.focus_force()
 
     def find_first_valid_t(self) -> int:
         """ Find the first t value that corresponding phase values are all valid for all phase
