@@ -17,12 +17,18 @@ from matplotlib.backends.backend_tkagg import (
     NavigationToolbar2Tk
 )
 from matplotlib.text import Text
+from PIL import Image, ImageTk
 
 from ._data import (
     BCM_FSCALE_NAME_MAP,
     BCM_TRACE_VIS_MAP,
+    BPM_TRACE_VIS_MAP,
 )
 from ._log import logger
+from .resources import (
+    rc_bcm_image_bytes,
+    rc_bpm_image_bytes
+)
 
 # matplotlib.pyplot.rcParams['axes.prop_cycle']
 _LINE_COLORS = [
@@ -472,11 +478,17 @@ class FigureWindow(tk.Toplevel):
         lbl.pack(side=tk.LEFT, padx=1)
 
         for l_p, l_m in zip(ax_p.get_lines(), ax_m.get_lines()):
-            name = l_p.get_label()[4:9]
-            v = self._curve_vis_map.setdefault(name, tk.BooleanVar(value=True))
+            name = l_p.get_label()[:9]
+            v = self._curve_vis_map.setdefault(
+                    name, tk.BooleanVar(value=BPM_TRACE_VIS_MAP.get(name, True)))
             chkbox = ttk.Checkbutton(frame, text=name, variable=v,
                                      command=partial(on_show, name, l_p, l_m, fig))
             chkbox.pack(side=tk.LEFT, padx=1)
+            if not v.get():
+                on_show(name, l_p, l_m, fig)
+                _auto_scale_y(ax_p)
+                _auto_scale_y(ax_m)
+                fig.canvas.draw_idle()
         # -> right button for layout
         layout_btn = ttk.Button(frame, text="Layout",
                                 command=partial(self.on_show_layout, "BPM"))
@@ -485,9 +497,6 @@ class FigureWindow(tk.Toplevel):
     def on_show_layout(self, dev_type: str):
         """ Show the overview image for the layout of devices.
         """
-        from PIL import Image, ImageTk
-        from pathlib import Path
-
         def _resize(evt):
             # resize
             w = popup.winfo_width()
@@ -500,17 +509,16 @@ class FigureWindow(tk.Toplevel):
             img_lbl.config(image=self.img_tk)
 
         if dev_type == "BCM":
-            filename = "bcms.png"
+            img_bytes = rc_bcm_image_bytes
         else:
-            filename = "linac_BPMs.png"
+            img_bytes = rc_bpm_image_bytes
 
         popup = tk.Toplevel()
         popup.title(f"Schematic overview for: {dev_type}")
         popup.resizable(False, False)  # Enable resizing
         img_lbl = ttk.Label(popup, anchor=tk.CENTER)
         img_lbl.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        img_pth = Path(__file__).parent.joinpath("resources", filename)
-        img = Image.open(img_pth)
+        img = Image.open(img_bytes)
         self.img_tk = ImageTk.PhotoImage(img)
         img_lbl.config(image=self.img_tk)
         # popup.update_idletasks()

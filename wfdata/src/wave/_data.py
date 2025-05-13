@@ -56,6 +56,11 @@ BCM_TRACE_VIS_MAP = {
     "DBCM_LINACTGT": True,
 }
 
+# the BPM traces to hide
+BPM_TRACE_VIS_MAP = {
+    "BPM_D2466": False
+}
+
 # the datafiles (v1) with datetime before defined should be fixed
 # BCM_D1120 -> BCM_D1120c
 # BCM_D2183 -> BCM_D0989
