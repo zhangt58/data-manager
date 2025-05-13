@@ -455,6 +455,10 @@ class FigureWindow(tk.Toplevel):
                 on_show(name, l, fig)
                 _auto_scale_y(ax)
                 fig.canvas.draw_idle()
+        # -> right button for layout
+        layout_btn = ttk.Button(frame, text="Layout",
+                                command=partial(self.on_show_layout, "BCM"))
+        layout_btn.pack(side=tk.RIGHT, padx=1)
 
     def _create_bpm_vis_btns(self, frame, fig, ax_p, ax_m):
         def on_show(name, curve1, curve2, fig):
@@ -472,6 +476,49 @@ class FigureWindow(tk.Toplevel):
             chkbox = ttk.Checkbutton(frame, text=name, variable=v,
                                      command=partial(on_show, name, l_p, l_m, fig))
             chkbox.pack(side=tk.LEFT, padx=1)
+        # -> right button for layout
+        layout_btn = ttk.Button(frame, text="Layout",
+                                command=partial(self.on_show_layout, "BPM"))
+        layout_btn.pack(side=tk.RIGHT, padx=1)
+
+    def on_show_layout(self, dev_type: str):
+        """ Show the overview image for the layout of devices.
+        """
+        from PIL import Image, ImageTk
+        from pathlib import Path
+
+        def _resize(evt):
+            # resize
+            w = popup.winfo_width()
+            h = popup.winfo_height()
+            w0, h0 = img.width, img.height
+            new_w = w
+            new_h = int(new_w * h0 / w0)
+            img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            self.img_tk = ImageTk.PhotoImage(img_resized)
+            img_lbl.config(image=self.img_tk)
+
+        if dev_type == "BCM":
+            filename = "bcms.png"
+        else:
+            filename = "linac_BPMs.png"
+
+        popup = tk.Toplevel()
+        popup.title(f"Schematic overview for: {dev_type}")
+        popup.resizable(False, False)  # Enable resizing
+        img_lbl = ttk.Label(popup, anchor=tk.CENTER)
+        img_lbl.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        img_pth = Path(__file__).parent.joinpath("resources", filename)
+        print(img_pth.is_file())
+        img = Image.open(img_pth)
+        self.img_tk = ImageTk.PhotoImage(img)
+        img_lbl.config(image=self.img_tk)
+        popup.update_idletasks()  # Force geometry update
+        popup.geometry(f"{img.width}x{img.height}")
+        # popup.bind("<Configure>", _resize)
+        popup.transient(self)
+        popup.grab_set()
+        popup.focus_force()
 
     def find_first_valid_t(self) -> int:
         """ Find the first t value that corresponding phase values are all valid for all phase
