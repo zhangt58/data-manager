@@ -22,6 +22,7 @@ from PIL import Image, ImageTk
 from ._data import (
     BCM_FSCALE_NAME_MAP,
     BCM_TRACE_VIS_MAP,
+    BPM_TRACE_VIS_MAP,
 )
 from ._log import logger
 from .resources import (
@@ -477,11 +478,17 @@ class FigureWindow(tk.Toplevel):
         lbl.pack(side=tk.LEFT, padx=1)
 
         for l_p, l_m in zip(ax_p.get_lines(), ax_m.get_lines()):
-            name = l_p.get_label()[4:9]
-            v = self._curve_vis_map.setdefault(name, tk.BooleanVar(value=True))
+            name = l_p.get_label()[:9]
+            v = self._curve_vis_map.setdefault(
+                    name, tk.BooleanVar(value=BPM_TRACE_VIS_MAP.get(name, True)))
             chkbox = ttk.Checkbutton(frame, text=name, variable=v,
                                      command=partial(on_show, name, l_p, l_m, fig))
             chkbox.pack(side=tk.LEFT, padx=1)
+            if not v.get():
+                on_show(name, l_p, l_m, fig)
+                _auto_scale_y(ax_p)
+                _auto_scale_y(ax_m)
+                fig.canvas.draw_idle()
         # -> right button for layout
         layout_btn = ttk.Button(frame, text="Layout",
                                 command=partial(self.on_show_layout, "BPM"))
