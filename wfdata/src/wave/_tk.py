@@ -410,6 +410,7 @@ class FigureWindow(tk.Toplevel):
         self.on_toggle_legends(fig)
         self.on_update_lw(fig)
         self.on_ds_changed(fig, None)
+        self.on_update_fontsize(fig)
         # re-create vis control frame
         self._create_bcm_vis_btns(self.bcm_vis_ctrl_frame, fig, ax)
 
