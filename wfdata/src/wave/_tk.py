@@ -483,7 +483,7 @@ class FigureWindow(tk.Toplevel):
             name = l_p.get_label()[:9]
             v = self._curve_vis_map.setdefault(
                     name, tk.BooleanVar(value=BPM_TRACE_VIS_MAP.get(name, True)))
-            chkbox = ttk.Checkbutton(frame, text=name, variable=v,
+            chkbox = ttk.Checkbutton(frame, text=name[4:], variable=v,
                                      command=partial(on_show, name, l_p, l_m, fig))
             chkbox.pack(side=tk.LEFT, padx=1)
             if not v.get():
