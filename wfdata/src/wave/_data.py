@@ -72,7 +72,10 @@ def _process_format_v0(store):
             k = f"/BCM/{i}"
             if k not in all_keys:
                 continue
-            bcm_dfs.append(store[k])
+            bcm_dfs.append(
+                store[k].rename(
+                    columns={"BCM_D1120": "BCM_D1120c", "BCM_D2183": "BCM_D0989"})
+                )
     except Exception as e:
         logger.error(f"Error processing BCM {store.filename}: {e}")
         return None, None
