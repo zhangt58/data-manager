@@ -233,13 +233,14 @@ class FigureWindow(tk.Toplevel):
                 else:
                     self.pha0_t = None
                 # print(type(self.pha0[0]), self.pha0[0][:100])
-            elif 'Current' in ylbl and bcm_fscale_map is not None:
+            elif 'Current' in ylbl:
                 ax_bcm = ax
-                for l in ax.get_lines():
-                    name = l.get_label()
-                    _fs = bcm_fscale_map[BCM_FSCALE_NAME_MAP[name]]
-                    self.bcm_fscales.append(_fs)
-                    self.bcm_ydata0.append(l.get_ydata())
+                if bcm_fscale_map is not None:
+                    for l in ax.get_lines():
+                        name = l.get_label()
+                        _fs = bcm_fscale_map[BCM_FSCALE_NAME_MAP[name]]
+                        self.bcm_fscales.append(_fs)
+                        self.bcm_ydata0.append(l.get_ydata())
             elif 'Magnitude' in ylbl:
                 ax_mag = ax
 
