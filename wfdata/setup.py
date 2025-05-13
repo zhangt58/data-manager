@@ -41,7 +41,7 @@ def read_license():
 
 setup(
     name=f'{PKG_NAME}',
-    version='1.2.0',
+    version='1.2.1',
     description='Tools for Managing the post-mortem BPM/BCM waveform data',
     long_description=readme(),
     license=read_license(),
@@ -49,10 +49,12 @@ setup(
     author_email="zhangt@frib.msu.edu",
     url="https://stash.frib.msu.edu/projects/PHYAPP/repos/phantasy-apps",
     packages=[
+        f'{PKG_NAME}.wave.resources',
         f'{PKG_NAME}.wave',
         f'{PKG_NAME}'
     ],
     package_dir={
+        f'{PKG_NAME}.wave.resources': 'src/wave/resources',
         f'{PKG_NAME}.wave': 'src/wave',
         f'{PKG_NAME}': 'src',
     },
