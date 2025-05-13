@@ -509,12 +509,16 @@ class FigureWindow(tk.Toplevel):
         img_lbl = ttk.Label(popup, anchor=tk.CENTER)
         img_lbl.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         img_pth = Path(__file__).parent.joinpath("resources", filename)
-        print(img_pth.is_file())
         img = Image.open(img_pth)
         self.img_tk = ImageTk.PhotoImage(img)
         img_lbl.config(image=self.img_tk)
-        popup.update_idletasks()  # Force geometry update
-        popup.geometry(f"{img.width}x{img.height}")
+        # popup.update_idletasks()
+        # parent window position and size
+        px, py = self.winfo_x(), self.winfo_y()
+        pw, ph = self.winfo_width(), self.winfo_height()
+        x = px + (pw - img.width) // 2
+        y = py + (ph - img.height) // 2
+        popup.geometry(f"{img.width}x{img.height}+{x}+{y}")
         # popup.bind("<Configure>", _resize)
         popup.transient(self)
         popup.grab_set()
