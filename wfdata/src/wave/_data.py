@@ -324,6 +324,9 @@ def plot(df: pd.DataFrame, t0: str, title: str, **kws):
             label=npermit_col, ylim=(-0.2, 1.2), alpha=0.85)
     ax1r.set_ylabel("NPERMIT")
     ax1r.legend(loc="lower left")
+    # make xypos reported by mousemove against ax1, while make ax1r also seen.
+    ax1.set_zorder(10)
+    ax1.patch.set_visible(False)
 
     # BPM
     bpm_amp_cols = [c for c in df.columns if 'MAG' in c]
