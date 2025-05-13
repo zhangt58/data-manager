@@ -20,8 +20,9 @@ from tkinter import (
     messagebox,
     scrolledtext,
 )
-from pathlib import Path
 from functools import partial
+from fnmatch import fnmatch
+from pathlib import Path
 from typing import Union
 from PIL import Image, ImageDraw, ImageTk
 
@@ -84,6 +85,11 @@ class MainWindow(tk.Tk):
             logger.info(f"Reading event type filters from {self.event_filter_filepath}")
         else:
             self.event_filter_filepath = None
+        #
+        # the variable for ion_name combox
+        self.ion_name_var = tk.StringVar(value="All")
+        # the variable for general string pattern (fnmatch)
+        self.fpattern_var = tk.StringVar(value="*")
         #
         self.csv_file = csv_file
         self.trip_info_file = trip_info_file
@@ -212,6 +218,39 @@ class MainWindow(tk.Tk):
         self.bind("<Control-a>", lambda e: self.on_about())
         self.bind("<F1>", lambda e: on_help())
 
+    def on_filter_data_on_ion(self, df: pd.DataFrame) -> pd.DataFrame:
+        """ Return a new dataframe after applying the filter on the passed *df* on Ion.
+        """
+        ion_name = self.ion_name_var.get()
+        if ion_name != "All":
+            logger.debug(f"Filter table on Ion == {ion_name}")
+            return df[df['Ion']==ion_name]
+        return df
+
+    def on_filter_data_on_pattern(self, df: pd.DataFrame) -> pd.DataFrame:
+        """ Return a new dataframe with rows that match the wildcard pattern.
+        """
+        pat = self.fpattern_var.get()
+        if pat.strip() == "":
+            pat = "*"
+        logger.debug(f"Search table on pattern: {pat}")
+        matches = df.apply(lambda row: any(fnmatch(str(cell), pat) for cell in row), axis=1)
+        return df[matches]
+
+    def on_search_pattern_changed(self, evt):
+        """ Press return on fpattern input box, search the full table, return rows that
+        matches the pattern.
+        """
+        self.fpattern_var.set(evt.widget.get())
+        self._reset_main_table()
+        self._post_refresh_table()
+
+    def on_ion_name_changed(self, evt):
+        """ Ion name changed.
+        """
+        self._reset_main_table()
+        self._post_refresh_table()
+
     def read_data(self, filter: Union[str, None] = None) -> tuple[pd.DataFrame, Union[pd.DataFrame, None]]:
         """ Read a list or rows data from *csv_file*.
         # filter the "Description" column: MTCA06
@@ -252,6 +291,7 @@ class MainWindow(tk.Tk):
                 idx1 = df1.index[df1.index.isin(idx)]
                 df = df1.loc[idx1].reset_index()
                 self.info_var.set(DEFAULT_INFO_STRING)
+
         return df, df_info
 
     def set_var(self, var_obj: tk.StringVar, new_val: str,
@@ -333,6 +373,28 @@ class MainWindow(tk.Tk):
         reload_fast_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 150{MU_GREEK}s",
                                           command=partial(self.on_reload, "150us"))
         reload_fast_trip_btn.pack(side=tk.LEFT, padx=5)
+
+        # additional filters applied with AND logic on the three reload buttons
+        vline = ttk.Separator(ctrl_frame1, orient="vertical")
+        vline.pack(side=tk.LEFT, fill=tk.Y, padx=2)
+
+        # ion name combox
+        ion_name_lbl = ttk.Label(ctrl_frame1, text="Ion", width=3)
+        ion_name_lbl.pack(side=tk.LEFT, padx=2)
+        ion_name_cbb = ttk.Combobox(ctrl_frame1, textvariable=self.ion_name_var,
+                                    state="readonly", justify=tk.CENTER, width=6,
+                                    values=['All'] + list(self.data['Ion'].unique()))
+        ion_name_cbb.pack(side=tk.LEFT, padx=5)
+        ion_name_cbb.set("All")
+        ion_name_cbb.bind("<<ComboboxSelected>>", self.on_ion_name_changed)
+        # search input box
+        fpattern_lbl = ttk.Label(ctrl_frame1, text="Search", width=6)
+        fpattern_lbl.pack(side=tk.LEFT, padx=5)
+        fpattern_entry = ttk.Entry(ctrl_frame1, justify=tk.CENTER, width=6)
+        fpattern_entry.pack(side=tk.LEFT, padx=5)
+        fpattern_entry.bind("<Return>", self.on_search_pattern_changed)
+        fpattern_entry.insert(0, "*")
+
         #
         # Link to the webview of MPS event table
         webview_btn = ttk.Button(ctrl_frame1, text="Stats View",
@@ -554,9 +616,11 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         """ Reload the MPS faults table.
         """
         self.refresh_table_data(filter)
+        self._post_refresh_table()
+
+    def _post_refresh_table(self):
         # clear the cache
         DATA_PATH_CACHE.clear()
-
         # highlight the last selected row if applicable
         if self.selected_iid is not None and self.tree.exists(self.selected_iid):
             self.tree.selection_set(self.selected_iid)
@@ -693,12 +757,17 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
     def present_main_data(self):
         """ Present the data to the main table.
         """
-        for i, row in self.data.iterrows():
+        # apply other filters
+        df = self.on_filter_data_on_ion(self.data)
+        # apply general search
+        df = self.on_filter_data_on_pattern(df)
+        #
+        for i, row in df.iterrows():
             row.Power = f"{row.Power/1e3:.2f} kW" if row.Power > 1e3 else f"{int(row.Power)} W"
             self.tree.insert("", tk.END, iid=row['Fault_ID'], values=row.to_list())
 
         # post the total number of entries
-        self.nrecords_var.set(f"Total Events: {self.data.shape[0]:>4d}")
+        self.nrecords_var.set(f"Total Events: {df.shape[0]:>4d}")
 
     def display_info(self, items):
         ftid: int = int(items[0])
@@ -722,6 +791,10 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
         """ Re-read the data and refresh the table.
         """
         self.data, self.data_info = self.read_data(filter)
+        self._reset_main_table()
+
+    def _reset_main_table(self):
+        # clear and reset
         self.tree.delete(*self.tree.get_children())
         self.present_main_data()
 
