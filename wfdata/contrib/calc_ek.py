@@ -15,6 +15,7 @@ The phase offset data per each BPM:
 
 
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def read_opt(filepath: str):
@@ -35,3 +36,8 @@ df_bpm = read_opt("20250514T033510_33355_opt.h5")
 ...                                   ...            ...  ...            ...            ...
 """
 ### Energy column calculation ...
+# plot:
+#
+# df_bpm.plot(y='BPM_D2212-PHA')
+# plt.show()
+
