@@ -1,6 +1,0 @@
-pandas==2.2.3
-tables==3.10.1
-pygwalker==0.4.9.14
-# ipywidgets==8.1.5
-# jupyter==1.1.1
-# matplotlib==3.10.1
