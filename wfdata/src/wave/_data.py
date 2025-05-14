@@ -45,7 +45,7 @@ BCM_TRACE_VIS_MAP = {
     "BCM_D4169": False,
     "BCM_D5521": True,
     "BCM_D5789": True,
-    "BCM_D1120c": True,
+    "BCM_D1120c": False,
     # DBCM
     "DBCM_LS1TRANS": True,
     "DBCM_CHRGSTAT": True,
