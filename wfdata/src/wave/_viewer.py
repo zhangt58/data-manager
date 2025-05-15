@@ -113,19 +113,15 @@ class MainWindow(tk.Tk):
         # | Table | preview |
         # | ----- | ------- |
         #
-        main_frame = ttk.Frame(self)
+        main_frame = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         main_frame.pack(fill=tk.BOTH, expand=True)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=4, minsize=500)
-        main_frame.rowconfigure(0, weight=1)
         self.main_frame = main_frame
         #
-        left_panel = ttk.Frame(self.main_frame, padding=2, borderwidth=1)
-        left_panel.grid(row=0, column=0, sticky="nsew")
-        self.left_panel = left_panel
+        self.left_panel = ttk.Frame(self.main_frame, padding=2, borderwidth=1)
+        main_frame.add(self.left_panel)
         #
         self.right_panel = ttk.Frame(self.main_frame, padding=2, borderwidth=2)
-        self.right_panel.grid(row=0, column=1, sticky="nsew")
+        main_frame.add(self.right_panel)
 
         #
         self.create_table_panel()
@@ -326,10 +322,10 @@ class MainWindow(tk.Tk):
     def create_table_panel(self):
         """ Create the table for MPS faults data
         """
-        #
+        # data frame
         # | main tree frame
         # | trip-info tree frame
-        # | bottom frame
+        # | ctrl frame
         #
         data_frame = ttk.Frame(self.left_panel)
         data_frame.pack(fill=tk.BOTH, expand=True)
