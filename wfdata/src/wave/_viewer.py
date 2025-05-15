@@ -252,6 +252,7 @@ class MainWindow(tk.Tk):
     def read_data(self, filter: Union[str, None] = None) -> tuple[pd.DataFrame, Union[pd.DataFrame, None]]:
         """ Read a list or rows data from *csv_file*.
         # filter the "Description" column: MTCA06
+        # filter the "T Window" column: 10ms
         # filter the "T Window" column: 150us
         """
         evt_typ_filters = _read_evt_typ_filter(self.event_filter_filepath)
@@ -276,6 +277,21 @@ class MainWindow(tk.Tk):
         # filter main
         if filter == "MTCA06":
             df = df[df["Description"] == "MTCA06"].reset_index(drop=True)
+
+        # filter info
+        if filter == "10ms":
+            if df_info is None:
+                self.set_var(self.info_var, "MTCA trip info is not available!",
+                             DEFAULT_INFO_STRING, self.info_lbl, RED_COLOR_HEX, self.lbl_sty_fg)
+            else:
+                _df = df_info.set_index('Fault_ID')
+                idx = _df[_df["T Window"].astype(str).str.contains(
+                    "Diff 10ms", regex=True)].index
+                df1 = df.set_index('Fault_ID')
+                idx1 = df1.index[df1.index.isin(idx)]
+                df = df1.loc[idx1].reset_index()
+                self.info_var.set(DEFAULT_INFO_STRING)
+
         # filter info
         if filter == "150us":
             if df_info is None:
@@ -366,11 +382,17 @@ class MainWindow(tk.Tk):
         # description = MTCA06
         reload_mtca_btn = ttk.Button(ctrl_frame1, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
-        reload_mtca_btn.pack(side=tk.LEFT, padx=5)
+        reload_mtca_btn.pack(side=tk.LEFT, padx=3)
+
+        # T Window has 10ms (need --trip-info-file)
+        reload_10ms_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 10ms",
+                                          command=partial(self.on_reload, "10ms"))
+        reload_10ms_trip_btn.pack(side=tk.LEFT, padx=3)
+
         # T Window has 150us (need --trip-info-file)
         reload_fast_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 150{MU_GREEK}s",
                                           command=partial(self.on_reload, "150us"))
-        reload_fast_trip_btn.pack(side=tk.LEFT, padx=5)
+        reload_fast_trip_btn.pack(side=tk.LEFT, padx=3)
 
         # additional filters applied with AND logic on the three reload buttons
         vline = ttk.Separator(ctrl_frame1, orient="vertical")
@@ -382,14 +404,14 @@ class MainWindow(tk.Tk):
         ion_name_cbb = ttk.Combobox(ctrl_frame1, textvariable=self.ion_name_var,
                                     state="readonly", justify=tk.CENTER, width=6,
                                     values=['All'] + list(self.data['Ion'].unique()))
-        ion_name_cbb.pack(side=tk.LEFT, padx=5)
+        ion_name_cbb.pack(side=tk.LEFT, padx=3)
         ion_name_cbb.set("All")
         ion_name_cbb.bind("<<ComboboxSelected>>", self.on_ion_name_changed)
         # search input box
         fpattern_lbl = ttk.Label(ctrl_frame1, text="Search", width=6)
-        fpattern_lbl.pack(side=tk.LEFT, padx=5)
+        fpattern_lbl.pack(side=tk.LEFT, padx=3)
         fpattern_entry = ttk.Entry(ctrl_frame1, justify=tk.CENTER)
-        fpattern_entry.pack(side=tk.LEFT, padx=5)
+        fpattern_entry.pack(side=tk.LEFT, padx=3)
         fpattern_entry.bind("<Return>", self.on_search_pattern_changed)
         fpattern_entry.insert(0, "")
 
