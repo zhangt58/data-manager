@@ -230,11 +230,9 @@ class MainWindow(tk.Tk):
     def on_filter_data_on_pattern(self, df: pd.DataFrame) -> pd.DataFrame:
         """ Return a new dataframe with rows that match the wildcard pattern.
         """
-        pat = self.fpattern_var.get()
-        if pat.strip() == "":
-            pat = "*"
-        logger.debug(f"Search table on pattern: {pat}")
-        matches = df.apply(lambda row: any(fnmatch(str(cell), pat) for cell in row), axis=1)
+        pat = self.fpattern_var.get().strip()
+        logger.debug(f"Search table on pattern: '*{pat}*'")
+        matches = df.apply(lambda row: any(fnmatch(str(cell), f"*{pat}*") for cell in row), axis=1)
         return df[matches]
 
     def on_search_pattern_changed(self, evt):
