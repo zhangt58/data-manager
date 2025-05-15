@@ -44,6 +44,8 @@ _LINE_COLORS = [
     '#17becf'
 ]
 
+MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
+
 
 class FigureWindow(tk.Toplevel):
     # Present figures in a Tkinter GUI,
@@ -108,11 +110,13 @@ class FigureWindow(tk.Toplevel):
         # tools frame:
         #      0         1          2
         #0 |toolbar | bcm_ctrl | X-Axis |
-        #1 |phase   |          | Y-Axis |
+        #1 |phase   |AVG-chk(*)| Y-Axis |
         # figure frame
         # misc frame
         # BCM trace visibility ctrl frame
         # BPM trace visibility ctrl frame
+        # (*) AVG-chk: a row of Checkbuttons for applying rolling average at
+        #              different window size
         #
         tools_frame = ttk.Frame(frame)
         tools_frame.pack(fill=tk.X, padx=2, pady=2)
@@ -128,8 +132,10 @@ class FigureWindow(tk.Toplevel):
         xaxis_frame.grid(row=0, column=2, sticky="ew")
         #
         pha_frame = ttk.Frame(tools_frame)
+        wave_roll_frame = ttk.Frame(tools_frame)
         yaxis_frame = ttk.Frame(tools_frame)
         pha_frame.grid(row=1, column=0, sticky="ew")
+        wave_roll_frame.grid(row=1, column=1, sticky="ew")
         yaxis_frame.grid(row=1, column=2, sticky="ew")
 
         # figure
@@ -275,7 +281,7 @@ class FigureWindow(tk.Toplevel):
                                 figure, ax_bcm)
         )
         self.show_as_dbcm_chkbox = show_as_dbcm_chkbox
-         # button for hints
+        # button for hints
         bcm_help_btn = ttk.Button(bcm_ctrl_frame, text="?", width=2,
                                   command=partial(self.on_help_bcm_controls, bcm_fscale_map))
         if dbcm_df is None or dbcm_df.empty:
@@ -298,6 +304,28 @@ class FigureWindow(tk.Toplevel):
         self._curve_vis_map: dict[str, tk.BooleanVar] = {}
         self._create_bcm_vis_btns(bcm_vis_ctrl_frame, figure, ax_bcm)
         self._create_bpm_vis_btns(bpm_vis_ctrl_frame, figure, ax_pha, ax_mag)
+
+        # wave_roll_frame: rolling average
+        # keys: window size (str), '15', '150', etc.
+        self.roll_var_map: dict = {}
+        self.roll_chkbox_map: dict = {}
+        # keys: line labels (original) + line label + win_size_s (rolling averaged ones)
+        self.trace_data_map: dict = {}
+        #
+        for win_size in (15, 150):
+            win_size_s = str(win_size)
+            _v = self.roll_var_map.setdefault(win_size_s, tk.BooleanVar(value=False))
+            _o = ttk.Checkbutton(wave_roll_frame,
+                                 text=f"{win_size}{MU_GREEK}s",
+                                 variable=_v,
+                                 command=partial(
+                                     self.on_rolling_wave, win_size,
+                                     figure, ax_bcm, ax_pha, ax_mag
+                                 )
+                 )
+            _o.pack(side=tk.LEFT, padx=2)
+            self.roll_chkbox_map[win_size_s] = _o
+
 
         # yaxis_frame
         # add a button to adjust auto scale Y limits
@@ -344,6 +372,78 @@ class FigureWindow(tk.Toplevel):
         t_0 = self.find_first_valid_t()
         sub_pha_txt1.insert(0, str(t_0))
         sub_pha_txt2.insert(0, str(t_0 + 10))
+
+    def on_rolling_wave(self, win_size: int, fig, ax_bcm, ax_pha, ax_mag):
+        """ Apply rolling average to the waves.
+        """
+        win_size_s = str(win_size)
+        is_roll_at_win_size = self.roll_var_map.get(win_size_s).get()
+        if is_roll_at_win_size:
+            # disable other roll_<win_size>_chkbox and
+            # the chkbox for BCM/DBCM view, Norm/raw BCM
+            other_state_s = "disabled"
+            self._rolling_bcm_traces(ax_bcm, win_size)
+        else:
+            # enable other roll_<win_size>_chkbox
+            # restore the chkbox for BCM/DBCM view, Norm/raw BCM
+            # with the var variables
+            other_state_s = "normal"
+            self._restore_bcm_traces(ax_bcm)
+
+        # update other rolling chkbox state
+        for i, chkbox in self.roll_chkbox_map.items():
+            if i == win_size_s:
+                continue
+            chkbox.config(state=other_state_s)
+        # update the checkbox for DBCM/BCM view, norm/raw BCM data
+        if other_state_s == "disabled":
+            for o in (self.bcm_norm_toggle_chkbox, self.show_as_dbcm_chkbox):
+                o.config(state=other_state_s)
+        else:
+            show_dbcm = self.show_as_dbcm_toggle_var.get()
+            norm_bcm = self.bcm_norm_toggle_var.get()
+            if not show_dbcm and not norm_bcm:
+                state1, state2 = "normal", "normal"
+            if show_dbcm and not norm_bcm:
+                state1, state2 = "normal", "disabled"
+            if not show_dbcm and norm_bcm:
+                state1, state2 = "disabled", "normal"
+            self.show_as_dbcm_chkbox.config(state=state1)
+            self.bcm_norm_toggle_chkbox.config(state=state2)
+        #
+        fig.canvas.draw_idle()
+
+    def _restore_bcm_traces(self, ax):
+        """ Restore the traces before rolling averaging.
+        """
+        # normalized trace?
+        is_norm = self.bcm_norm_toggle_var.get()
+        for l in ax.get_lines():
+            name = l.get_label()
+            name = f"{name}_norm" if is_norm else name
+            y0 = self.trace_data_map[name]
+            l.set_ydata(y0)
+        _auto_scale_y(ax)
+
+    def _rolling_bcm_traces(self, ax, win_size: int):
+        """ Apply rolling average to the BCM traces.
+        """
+        # normalized trace?
+        is_norm = self.bcm_norm_toggle_var.get()
+        for l in ax.get_lines():
+            name = l.get_label()
+            # since the same label is being used for original and the normalized trace
+            # here needs to use different names in the trace_data_map.
+            name = f"{name}_norm" if is_norm else name
+            roll_name = f"{name}_{win_size}"
+            # get and keep the original data, rolled one
+            y0 = self.trace_data_map.setdefault(name, l.get_ydata())
+            roll_y = self.trace_data_map.setdefault(roll_name, np.convolve(
+                y0, np.ones(win_size) / win_size, mode='full')[:len(y0)])
+            # only change the ydata
+            l.set_ydata(roll_y)
+        _auto_scale_y(ax)
+
 
     def save_bcm_plot(self, ax):
         """ Save BCM plot.
