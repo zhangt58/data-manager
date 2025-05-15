@@ -390,7 +390,7 @@ class MainWindow(tk.Tk):
         # search input box
         fpattern_lbl = ttk.Label(ctrl_frame1, text="Search", width=6)
         fpattern_lbl.pack(side=tk.LEFT, padx=5)
-        fpattern_entry = ttk.Entry(ctrl_frame1, justify=tk.CENTER, width=6)
+        fpattern_entry = ttk.Entry(ctrl_frame1, justify=tk.CENTER)
         fpattern_entry.pack(side=tk.LEFT, padx=5)
         fpattern_entry.bind("<Return>", self.on_search_pattern_changed)
         fpattern_entry.insert(0, "*")
