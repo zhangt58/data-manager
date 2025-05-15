@@ -306,13 +306,15 @@ class FigureWindow(tk.Toplevel):
         self._create_bpm_vis_btns(bpm_vis_ctrl_frame, figure, ax_pha, ax_mag)
 
         # wave_roll_frame: rolling average
+        wave_roll_lbl = ttk.Label(wave_roll_frame, text="Moving Average")
+        wave_roll_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         # keys: window size (str), '15', '150', etc.
         self.roll_var_map: dict = {}
         self.roll_chkbox_map: dict = {}
         # keys: line labels (original) + line label + win_size_s (rolling averaged ones)
         self.trace_data_map: dict = {}
         #
-        for win_size in (15, 150):
+        for win_size in (150, 15):
             win_size_s = str(win_size)
             _v = self.roll_var_map.setdefault(win_size_s, tk.BooleanVar(value=False))
             _o = ttk.Checkbutton(wave_roll_frame,
@@ -323,7 +325,7 @@ class FigureWindow(tk.Toplevel):
                                      figure, ax_bcm, ax_pha, ax_mag
                                  )
                  )
-            _o.pack(side=tk.LEFT, padx=2)
+            _o.pack(side=tk.RIGHT, padx=2)
             self.roll_chkbox_map[win_size_s] = _o
 
 
