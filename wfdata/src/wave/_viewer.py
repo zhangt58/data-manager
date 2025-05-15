@@ -393,7 +393,7 @@ class MainWindow(tk.Tk):
         fpattern_entry = ttk.Entry(ctrl_frame1, justify=tk.CENTER)
         fpattern_entry.pack(side=tk.LEFT, padx=5)
         fpattern_entry.bind("<Return>", self.on_search_pattern_changed)
-        fpattern_entry.insert(0, "*")
+        fpattern_entry.insert(0, "")
 
         #
         # Link to the webview of MPS event table
