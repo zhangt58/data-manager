@@ -59,7 +59,7 @@ class FigureWindow(tk.Toplevel):
     # - trip_info_file: str
     def __init__(self, figures: list[tuple],
                  window_title: str, grid: tuple[int, int],
-                 padx: int = 5, pady: int = 5, notes: str = "",
+                 padx: int = 1, pady: int = 1, notes: str = "",
                  **kws):
         super().__init__(kws.get('parent', None))
 
@@ -122,7 +122,7 @@ class FigureWindow(tk.Toplevel):
         quit_btn.pack(side=tk.RIGHT, fill=tk.X, pady=pady, padx=padx)
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
-                     padx: int = 5, pady: int = 5, fig_dpi: int = None, **kws):
+                     padx: int = 1, pady: int = 1, fig_dpi: int = None, **kws):
         # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict, trip_info_series: Series
         dbcm_df = kws.get('dbcm_df', None)
         bcm_fscale_map = kws.get('bcm_fscale_map', None)
@@ -143,7 +143,7 @@ class FigureWindow(tk.Toplevel):
         #              different window size
         #
         tools_frame = ttk.Frame(frame)
-        tools_frame.pack(fill=tk.X, padx=2, pady=2)
+        tools_frame.pack(fill=tk.X, padx=1, pady=1)
         tools_frame.columnconfigure(0, weight=2)
         tools_frame.columnconfigure(1, weight=1)
         tools_frame.columnconfigure(2, weight=0)
@@ -203,7 +203,7 @@ class FigureWindow(tk.Toplevel):
         #
         canvas = FigureCanvasTkAgg(figure, master=fig_frame)
         canvas.draw_idle()
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
         #
         tb = NavigationToolbar2Tk(canvas, tb_frame)
         tb.update()
@@ -211,7 +211,7 @@ class FigureWindow(tk.Toplevel):
         # misc_frame (below figure frame)
         # other controls
         misc_frame = ttk.Frame(frame)
-        misc_frame.pack(fill=tk.X, padx=2, pady=2)
+        misc_frame.pack(fill=tk.X, padx=1, pady=1)
 
         # lw
         lw_lbl = ttk.Label(misc_frame, text="Line Width")
@@ -236,8 +236,8 @@ class FigureWindow(tk.Toplevel):
         fs_inc_sbox = ttk.Spinbox(misc_frame, from_=-4, to=10, increment=0.5,
                                   state='readonly', width=4, justify=tk.CENTER,
                                   command=partial(self.on_update_fontsize, figure))
-        fs_lbl.pack(side=tk.LEFT, padx=5)
-        fs_inc_sbox.pack(side=tk.LEFT, padx=2)
+        fs_lbl.pack(side=tk.LEFT, padx=1)
+        fs_inc_sbox.pack(side=tk.LEFT, padx=1)
         self.fs_inc_sbox = fs_inc_sbox
 
         # legend on/off checkbox
@@ -246,15 +246,15 @@ class FigureWindow(tk.Toplevel):
                 text="Legend", width=6,
                 variable=self.legend_toggle_var,
                 command=partial(self.on_toggle_legends, figure))
-        legend_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
+        legend_toggle_chkbox.pack(side=tk.RIGHT, padx=1)
 
         # visibility controls
         hline = ttk.Separator(frame, orient="horizontal")
-        hline.pack(fill=tk.X, padx=2, pady=1)
+        hline.pack(fill=tk.X, padx=1, pady=1)
         self.bcm_vis_ctrl_frame = bcm_vis_ctrl_frame = ttk.Frame(frame)
-        bcm_vis_ctrl_frame.pack(fill=tk.X, padx=2, pady=2)
+        bcm_vis_ctrl_frame.pack(fill=tk.X, padx=1, pady=1)
         bpm_vis_ctrl_frame = ttk.Frame(frame)
-        bpm_vis_ctrl_frame.pack(fill=tk.X, padx=2, pady=2)
+        bpm_vis_ctrl_frame.pack(fill=tk.X, padx=1, pady=1)
 
         # phase frame (variables)
         ax_pha = None
@@ -407,14 +407,14 @@ class FigureWindow(tk.Toplevel):
         help_btn = ttk.Button(pha_frame, text="?", width=2,
                               command=self.on_help_figure_controls)
         #
-        sub_pha_lbl.pack(side=tk.LEFT, padx=2, pady=2)
-        sub_pha_lbl_from.pack(side=tk.LEFT, padx=2, pady=2)
-        sub_pha_txt1.pack(side=tk.LEFT, padx=2, pady=2)
-        sub_pha_lbl_to.pack(side=tk.LEFT, padx=2, pady=2)
-        sub_pha_txt2.pack(side=tk.LEFT, padx=2, pady=2)
-        sub_pha_btn.pack(side=tk.LEFT, padx=2, pady=2)
-        reset_pha_btn.pack(side=tk.LEFT, padx=2, pady=2)
-        help_btn.pack(side=tk.RIGHT, padx=2, pady=2)
+        sub_pha_lbl.pack(side=tk.LEFT, padx=1, pady=1)
+        sub_pha_lbl_from.pack(side=tk.LEFT, padx=1, pady=1)
+        sub_pha_txt1.pack(side=tk.LEFT, padx=1, pady=1)
+        sub_pha_lbl_to.pack(side=tk.LEFT, padx=1, pady=1)
+        sub_pha_txt2.pack(side=tk.LEFT, padx=1, pady=1)
+        sub_pha_btn.pack(side=tk.LEFT, padx=1, pady=1)
+        reset_pha_btn.pack(side=tk.LEFT, padx=1, pady=1)
+        help_btn.pack(side=tk.RIGHT, padx=1, pady=1)
 
         # initialize
         try:
@@ -608,14 +608,14 @@ class FigureWindow(tk.Toplevel):
             _start_trim = 4
 
         lbl = ttk.Label(frame, text=_text, width=10)
-        lbl.pack(side=tk.LEFT, padx=1)
+        lbl.pack(side=tk.LEFT, padx=1, pady=1)
         for l in ax.get_lines():
             name = l.get_label()
             v = self._curve_vis_map.setdefault(
                     name, tk.BooleanVar(value=BCM_TRACE_VIS_MAP.get(name, True)))
             chkbox = ttk.Checkbutton(frame, text=name[_start_trim:], variable=v,
                                      command=partial(on_show, name, l, fig))
-            chkbox.pack(side=tk.LEFT, padx=1)
+            chkbox.pack(side=tk.LEFT, padx=1, pady=1)
             if not v.get():
                 on_show(name, l, fig)
                 _auto_scale_y(ax)
@@ -623,7 +623,7 @@ class FigureWindow(tk.Toplevel):
         # -> right button for layout
         layout_btn = ttk.Button(frame, text="Layout",
                                 command=partial(self.on_show_layout, "BCM"))
-        layout_btn.pack(side=tk.RIGHT, padx=1)
+        layout_btn.pack(side=tk.RIGHT, padx=1, pady=1)
 
     def _create_bpm_vis_btns(self, frame, fig, ax_p, ax_m):
         def on_show(name, curve1, curve2, fig):
@@ -633,7 +633,7 @@ class FigureWindow(tk.Toplevel):
             fig.canvas.draw_idle()
 
         lbl = ttk.Label(frame, text="BPM Trace", width=10)
-        lbl.pack(side=tk.LEFT, padx=1)
+        lbl.pack(side=tk.LEFT, padx=1, pady=1)
 
         for l_p, l_m in zip(ax_p.get_lines(), ax_m.get_lines()):
             name = l_p.get_label()[:9]
@@ -641,7 +641,7 @@ class FigureWindow(tk.Toplevel):
                     name, tk.BooleanVar(value=BPM_TRACE_VIS_MAP.get(name, True)))
             chkbox = ttk.Checkbutton(frame, text=name[4:], variable=v,
                                      command=partial(on_show, name, l_p, l_m, fig))
-            chkbox.pack(side=tk.LEFT, padx=1)
+            chkbox.pack(side=tk.LEFT, padx=1, pady=1)
             if not v.get():
                 on_show(name, l_p, l_m, fig)
                 _auto_scale_y(ax_p)
@@ -650,7 +650,7 @@ class FigureWindow(tk.Toplevel):
         # -> right button for layout
         layout_btn = ttk.Button(frame, text="Layout",
                                 command=partial(self.on_show_layout, "BPM"))
-        layout_btn.pack(side=tk.RIGHT, padx=1)
+        layout_btn.pack(side=tk.RIGHT, padx=1, pady=1)
 
     def on_show_layout(self, dev_type: str):
         """ Show the overview image for the layout of devices.
@@ -692,7 +692,7 @@ class FigureWindow(tk.Toplevel):
         popup.title(f"Schematic overview for: {dev_type}")
         popup.resizable(False, False)  # Enable resizing
         img_lbl = ttk.Label(popup, anchor=tk.CENTER)
-        img_lbl.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        img_lbl.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
         img = Image.open(img_bytes)
         img_tk = ImageTk.PhotoImage(img)
         img_lbl.config(image=img_tk)

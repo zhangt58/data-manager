@@ -50,6 +50,7 @@ class MainWindow(tk.Tk):
 
     def __init__(self, csv_file: str, trip_info_file: str, event_filter_file: str,
                  imags_dir: str, data_dirs: list[str], fig_dpi: Union[int, None] = None,
+                 fig_size: Union[str, None] = None,
                  theme_name: str = "arc", icon_path: Union[str, None] = None,
                  column_widths: dict = None):
         super().__init__()
@@ -99,6 +100,7 @@ class MainWindow(tk.Tk):
         self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
         self.column_widths = {} if column_widths is None else column_widths
         self.fig_dpi = fig_dpi
+        self.fig_size = fig_size
 
         # info for faults table panel
         self.info_var = tk.StringVar()
@@ -239,6 +241,14 @@ class MainWindow(tk.Tk):
         self._reset_main_table()
         self._post_refresh_table()
 
+    def on_clear_search(self, entry):
+        """ Clicked to clear the search pattern.
+        """
+        entry.delete(0, tk.END)
+        entry.insert(0, "")
+        entry.focus_set()
+        entry.event_generate("<Return>")
+
     def on_ion_name_changed(self, evt):
         """ Ion name changed.
         """
@@ -360,62 +370,71 @@ class MainWindow(tk.Tk):
         self.present_main_data()
 
         # The widgets below the tree_frame
-        # frame1
-        # |- [All] [MTCA06] Preview Event-#####  Total #
-        # frame2
-        # |- Info: xxxx
+        # ctrl-frame1
+        # |- filter frame1
+        #   |- [Reload All] [MTCA06] [Diff 10ms] [Diff 150us]   [Stats]
+        # |- filter frame2
+        #   |- '&' [Ion Dropdown] [Search Entry]
+        #
+        # ctrl-frame2
+        # |- Info: xxxx                         Total Events: #
         ctrl_frame = ttk.Frame(data_frame)
         ctrl_frame.grid(row=2, column=0, sticky="nsew")
 
         ctrl_frame1 = ttk.Frame(ctrl_frame)
-        ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
+        ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=2, pady=2)
         ctrl_frame2 = ttk.Frame(ctrl_frame)
-        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=5, pady=2)
+        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=2, pady=2)
+
+        filter_frame1 = ttk.Frame(ctrl_frame1)
+        filter_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=2, pady=2)
+        filter_frame2 = ttk.Frame(ctrl_frame1)
+        filter_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=2, pady=2)
+
         # all
-        reload_all_btn = ttk.Button(ctrl_frame1, text="Reload All",
+        reload_all_btn = ttk.Button(filter_frame1, text="Reload All",
                                     command=partial(self.on_reload, None))
         reload_all_btn.pack(side=tk.LEFT, padx=2)
         # description = MTCA06
-        reload_mtca_btn = ttk.Button(ctrl_frame1, text="MTCA06",
+        reload_mtca_btn = ttk.Button(filter_frame1, text="MTCA06",
                                      command=partial(self.on_reload, "MTCA06"))
-        reload_mtca_btn.pack(side=tk.LEFT, padx=3)
+        reload_mtca_btn.pack(side=tk.LEFT, padx=2)
 
         # T Window has 10ms (need --trip-info-file)
-        reload_10ms_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 10ms",
+        reload_10ms_trip_btn = ttk.Button(filter_frame1, text=f"Diff 10ms",
                                           command=partial(self.on_reload, "10ms"))
-        reload_10ms_trip_btn.pack(side=tk.LEFT, padx=3)
+        reload_10ms_trip_btn.pack(side=tk.LEFT, padx=2)
 
         # T Window has 150us (need --trip-info-file)
-        reload_fast_trip_btn = ttk.Button(ctrl_frame1, text=f"Diff 150{MU_GREEK}s",
+        reload_fast_trip_btn = ttk.Button(filter_frame1, text=f"Diff 150{MU_GREEK}s",
                                           command=partial(self.on_reload, "150us"))
-        reload_fast_trip_btn.pack(side=tk.LEFT, padx=3)
-
-        # additional filters applied with AND logic on the three reload buttons
-        vline = ttk.Separator(ctrl_frame1, orient="vertical")
-        vline.pack(side=tk.LEFT, fill=tk.Y, padx=2)
+        reload_fast_trip_btn.pack(side=tk.LEFT, padx=2)
+#
+        # Link to the webview of MPS event table
+        webview_btn = ttk.Button(filter_frame1, text="Stats View",
+                                 command=self.on_open_webview)
+        webview_btn.pack(side=tk.RIGHT, padx=2)
 
         # ion name combox
-        ion_name_lbl = ttk.Label(ctrl_frame1, text="Ion", width=3)
+        ion_name_lbl = ttk.Label(filter_frame2, text="&& Ion", width=6)
         ion_name_lbl.pack(side=tk.LEFT, padx=2)
-        ion_name_cbb = ttk.Combobox(ctrl_frame1, textvariable=self.ion_name_var,
+        ion_name_cbb = ttk.Combobox(filter_frame2, textvariable=self.ion_name_var,
                                     state="readonly", justify=tk.CENTER, width=6,
                                     values=['All'] + list(self.data['Ion'].unique()))
-        ion_name_cbb.pack(side=tk.LEFT, padx=3)
+        ion_name_cbb.pack(side=tk.LEFT, padx=2)
         ion_name_cbb.set("All")
         ion_name_cbb.bind("<<ComboboxSelected>>", self.on_ion_name_changed)
         # search input box
-        fpattern_lbl = ttk.Label(ctrl_frame1, text="Search", width=6)
-        fpattern_lbl.pack(side=tk.LEFT, padx=3)
-        fpattern_entry = ttk.Entry(ctrl_frame1, justify=tk.CENTER)
-        fpattern_entry.pack(side=tk.LEFT, padx=3)
+        fpattern_lbl = ttk.Label(filter_frame2, text="&& Match", width=8)
+        fpattern_lbl.pack(side=tk.LEFT, padx=2)
+        fpattern_entry = ttk.Entry(filter_frame2, justify=tk.CENTER)
+        fpattern_entry.pack(side=tk.LEFT, padx=2)
         fpattern_entry.bind("<Return>", self.on_search_pattern_changed)
         fpattern_entry.insert(0, "")
-
-        #
-        # Link to the webview of MPS event table
-        webview_btn = ttk.Button(ctrl_frame1, text="Stats View",
-                                 command=self.on_open_webview)
-        webview_btn.pack(side=tk.RIGHT, padx=2)
+        reset_search_btn = ttk.Button(filter_frame2, text="Clear",
+                command=partial(self.on_clear_search, fpattern_entry),
+                width=5)
+        reset_search_btn.pack(side=tk.LEFT, padx=2)
 
         # info label
         info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
@@ -486,37 +505,37 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
 
         # control frame
         ctrl_frame = ttk.Frame(self.right_panel)
-        ctrl_frame.grid(row=2, column=0, sticky="ew", pady=5)
+        ctrl_frame.grid(row=2, column=0, sticky="ew", pady=2)
         #
         ctrl_frame1 = ttk.Frame(ctrl_frame)
-        ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
+        ctrl_frame1.pack(side=tk.TOP, fill=tk.X, expand=True, padx=2, pady=2)
         ctrl_frame2 = ttk.Frame(ctrl_frame)
-        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=5, pady=2)
+        ctrl_frame2.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=2, pady=2)
         #
         # fit image size
         fit_btn = ttk.Button(ctrl_frame1, text="Fit", command=self.on_fit_image,
                              width=4)
-        fit_btn.pack(side=tk.LEFT, padx=5)
+        fit_btn.pack(side=tk.LEFT, padx=2)
         save_img_btn = ttk.Button(ctrl_frame1, text="Save", command=self.on_save_image,
-                                  width=5)
-        save_img_btn.pack(side=tk.LEFT, padx=5)
+                                  width=2)
+        save_img_btn.pack(side=tk.LEFT, padx=2)
         self.save_img_btn = save_img_btn
         # plot
         open_btn = ttk.Button(ctrl_frame1, text="Plot Opt", command=partial(self.on_open, True))
-        open_btn.pack(side=tk.RIGHT, padx=5)
+        open_btn.pack(side=tk.RIGHT, padx=2)
         open1_btn = ttk.Button(ctrl_frame1, text="Plot Raw", command=partial(self.on_open, False))
-        open1_btn.pack(side=tk.RIGHT, padx=5)
+        open1_btn.pack(side=tk.RIGHT, padx=2)
 
         # data/image info
         img_info_lbl = ttk.Label(ctrl_frame2, textvariable=self.img_info_var)
-        img_info_lbl.pack(side=tk.LEFT, fill=tk.X, padx=5)
+        img_info_lbl.pack(side=tk.LEFT, fill=tk.X, padx=2)
         self.img_info_lbl = img_info_lbl
 
         # get data
         opt_data_btn = ttk.Button(ctrl_frame2, text="Get Opt", command=partial(self.on_get_data, True))
-        opt_data_btn.pack(side=tk.RIGHT, padx=5)
+        opt_data_btn.pack(side=tk.RIGHT, padx=2)
         raw_data_btn = ttk.Button(ctrl_frame2, text="Get Raw", command=partial(self.on_get_data, False))
-        raw_data_btn.pack(side=tk.RIGHT, padx=5)
+        raw_data_btn.pack(side=tk.RIGHT, padx=2)
 
     def on_get_data(self, is_opt: bool):
         """ Get the data, opt or raw
@@ -662,6 +681,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             cmdline += f" --theme {self.theme_name}"
             if self.fig_dpi is not None:
                 cmdline += f" --fig-dpi {self.fig_dpi}"
+            if self.fig_size is not None:
+                cmdline += f" --fig-size {self.fig_size}"
             if self.trip_info_file is not None:
                 cmdline += f" --trip-info-file {self.trip_info_file}"
             _info_msg = f"Ploting with the {data_path} (raw)" if not is_opt else \
@@ -750,7 +771,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
             tree.configure(yscrollcommand=y_scroll.set)
         #
-        tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        tree.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         # set column headers
         self._set_table_headers(tree, headers, column_widths)
         return tree
@@ -931,10 +952,12 @@ def _read_evt_typ_filter(filepath: Path) -> Union[None, list[str]]:
 
 def main(mps_faults_path: str, trip_info_file: str, event_filter_file: str,
          images_dir: str, data_dirs: list[str], geometry: str = "1600x1200",
-         fig_dpi: Union[int, None] = None, theme_name: str = "arc",
+         fig_dpi: Union[int, None] = None,
+         fig_size: Union[str, None] = None,
+         theme_name: str = "arc",
          icon_path: Union[str, None] = None, **kws):
     app = MainWindow(mps_faults_path, trip_info_file, event_filter_file,
-                     images_dir, data_dirs, fig_dpi,
+                     images_dir, data_dirs, fig_dpi, fig_size,
                      theme_name, icon_path, column_widths=kws)
     app.geometry(geometry)
     w, h = geometry.split("x")

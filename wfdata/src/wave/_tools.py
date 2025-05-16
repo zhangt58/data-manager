@@ -301,6 +301,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                             "or v1 raw data; if none is defined, plot with the whole data.")
     parser.add_argument("--fig-dpi", dest="fig_dpi", type=int,
                         help="Override the figure DPI setting.")
+    parser.add_argument("--fig-size", dest="fig_size", type=str,
+                        help="Override the figure size setting, in wxh")
     parser.add_argument("--theme", dest="theme_name", type=str, default="arc",
                         help="The theme to style the UI, --list-themes to see options.")
     parser.add_argument("--list-themes", action="store_true",
@@ -342,9 +344,16 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
         fig_with_titles = []
         dbcm_dfs: list[pd.DataFrame] = []
         bcm_fscale_maps: list[dict] = []
+        try:
+            fig_w, fig_h = args.fig_size.split('x')
+            fig_w = float(fig_w)
+            fig_h = float(fig_h)
+        except Exception:
+            fig_w, fig_h = 12.4, 8
         for data_filepath in args.data_filepath[:n_figs]:
             _pth = Path(data_filepath)
-            fig, df_dbcm, bcm_fscale_map = create_plot(_pth, args.is_opt, t_range)
+            fig, df_dbcm, bcm_fscale_map = create_plot(_pth, args.is_opt, t_range,
+                                                       fig_size=(fig_w, fig_h))
             if fig is None:
                 continue
             fig.canvas.manager.set_window_title(f"Figure {_pth.name}")
@@ -408,6 +417,8 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
                         help="Set the log level, DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--fig-dpi", dest="fig_dpi", type=int,
                         help="Override the figure DPI setting in interactive mode.")
+    parser.add_argument("--fig-size", dest="fig_size", type=str,
+                        help="Override the figure size setting, in wxh")
     parser.add_argument("--column-widths", dest="col_widths", type=json.loads, default="{}",
                         help="JSON string for the column widths of the tree view.")
     parser.add_argument("--geometry", dest="geometry", type=str, default="1600x1200",
@@ -430,7 +441,8 @@ def view_tool(call_as_subtool: bool = True, prog: str = None):
         sys.exit(1)
     run_viewer(args.mps_faults_file, args.trip_info_file, args.event_filter_file,
                args.images_dir, args.data_dirs,
-               args.geometry, args.fig_dpi, args.theme_name,
+               args.geometry, args.fig_dpi, args.fig_size,
+               args.theme_name,
                args.icon_path, **args.col_widths)
 
 
@@ -479,7 +491,8 @@ def gen_figure(data_filepath: Path, figure_types: list[str],
 
 
 def create_plot(data_filepath: Path, is_opt: bool = False,
-                t_range: Union[None, tuple[int, int]] = None):
+                t_range: Union[None, tuple[int, int]] = None,
+                fig_size: Union[tuple[float, float], None] = None):
     """ Create the matplotlib figure object.
     """
     df, t0_s = read_data(data_filepath, t_range, is_opt)
@@ -488,7 +501,7 @@ def create_plot(data_filepath: Path, is_opt: bool = False,
     # raw DBCM data:
     df_dbcm = df[[c for c in df.columns if c.startswith('DBCM')]]
     bcm_fscale_map = df.attrs.get('BCM-FSCALE', None)
-    return plot(df, t0_s, data_filepath.name), df_dbcm, bcm_fscale_map
+    return plot(df, t0_s, data_filepath.name, figsize=fig_size), df_dbcm, bcm_fscale_map
 
 
 if __name__ == "__main__":
