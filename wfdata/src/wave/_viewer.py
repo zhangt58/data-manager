@@ -241,6 +241,14 @@ class MainWindow(tk.Tk):
         self._reset_main_table()
         self._post_refresh_table()
 
+    def on_clear_search(self, entry):
+        """ Clicked to clear the search pattern.
+        """
+        entry.delete(0, tk.END)
+        entry.insert(0, "")
+        entry.focus_set()
+        entry.event_generate("<Return>")
+
     def on_ion_name_changed(self, evt):
         """ Ion name changed.
         """
@@ -423,6 +431,10 @@ class MainWindow(tk.Tk):
         fpattern_entry.pack(side=tk.LEFT, padx=2)
         fpattern_entry.bind("<Return>", self.on_search_pattern_changed)
         fpattern_entry.insert(0, "")
+        reset_search_btn = ttk.Button(filter_frame2, text="Clear",
+                command=partial(self.on_clear_search, fpattern_entry),
+                width=5)
+        reset_search_btn.pack(side=tk.LEFT, padx=2)
 
         # info label
         info_lbl = ttk.Label(ctrl_frame2, textvariable=self.info_var)
