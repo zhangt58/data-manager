@@ -48,6 +48,9 @@ _LINE_COLORS = [
 MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
 FAULT_ID_REGEX = re.compile(r'(\d{5,})(?=_opt\.h5|\.h5$)')
 
+# if show the full command line for dm-wave plot
+DEFAULT_SHOW_CMD_INFO = False
+
 
 class FigureWindow(tk.Toplevel):
     # Present figures in a Tkinter GUI,
@@ -57,6 +60,7 @@ class FigureWindow(tk.Toplevel):
     # - dbcm_dfs: list[pd.DataFrame]
     # - bcm_fscale_maps: list[dict]
     # - trip_info_file: str
+    # - show_cmd_info: bool
     def __init__(self, figures: list[tuple],
                  window_title: str, grid: tuple[int, int],
                  padx: int = 1, pady: int = 1, notes: str = "",
@@ -107,19 +111,22 @@ class FigureWindow(tk.Toplevel):
                               trip_info_series=trip_info_series)
         del df_info
 
-        # bottom area (notes and Quit button)
-        bottom_frame = ttk.Frame(self)
-        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        if kws.get('show_cmd_info', DEFAULT_SHOW_CMD_INFO):
+            # bottom area (notes and Quit button)
+            bottom_frame = ttk.Frame(self)
+            bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
-        # notes area
-        notes_text = tk.Text(bottom_frame, height=3)
-        notes_text.insert("1.0", notes)
-        notes_text.config(state="disabled")
-        notes_text.pack(side=tk.LEFT, fill=tk.X, padx=padx, pady=pady, expand=True)
+            # notes area
+            notes_text = tk.Text(bottom_frame, height=3)
+            notes_text.insert("1.0", notes)
+            notes_text.config(state="disabled")
+            notes_text.pack(side=tk.LEFT, fill=tk.X, padx=padx, pady=pady, expand=True)
 
-        # quit button
-        quit_btn = ttk.Button(bottom_frame, text="Quit", command=self.quit)
-        quit_btn.pack(side=tk.RIGHT, fill=tk.X, pady=pady, padx=padx)
+            # quit button
+            quit_btn = ttk.Button(bottom_frame, text="Quit", command=self.quit)
+            quit_btn.pack(side=tk.RIGHT, fill=tk.X, pady=pady, padx=padx)
+        else:
+            logger.info(notes)
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
                      padx: int = 1, pady: int = 1, fig_dpi: int = None, **kws):
@@ -270,6 +277,11 @@ class FigureWindow(tk.Toplevel):
         self.bcm_fscales: list[float] = []
         ax_bcm = None
 
+        # if the DBCM and Normalize checkbox supported
+        # will be set False if the required data is missing
+        self._sup_dbcm_view = True
+        self._sup_norm_view = True
+
         # xaxis frame
         ttk.Separator(xaxis_frame, orient="vertical").pack(
                 side=tk.LEFT, fill=tk.Y, padx=1)
@@ -333,12 +345,16 @@ class FigureWindow(tk.Toplevel):
                                   command=partial(self.on_help_bcm_controls, bcm_fscale_map))
         if dbcm_df is None or dbcm_df.empty:
             show_as_dbcm_chkbox.config(state="disabled")
+            # not support DBCM view, the checkbox should always be disabled
+            self._sup_dbcm_view = False
         else:
             self.dbcm_df = dbcm_df
             self.dbcm_plots = None
         if bcm_fscale_map is None or not bcm_fscale_map:
             bcm_norm_toggle_chkbox.config(state="disabled")
             bcm_help_btn.config(state="disabled")
+            # not support BCM norm view, the checkbox should always be disabled
+            self._sup_norm_view = False
         #
         ttk.Separator(bcm_ctrl_frame, orient="vertical").pack(
                 side=tk.LEFT, fill=tk.Y, padx=1)
@@ -463,8 +479,12 @@ class FigureWindow(tk.Toplevel):
                 state1, state2 = "normal", "disabled"
             if not show_dbcm and norm_bcm:
                 state1, state2 = "disabled", "normal"
-            self.show_as_dbcm_chkbox.config(state=state1)
-            self.bcm_norm_toggle_chkbox.config(state=state2)
+            if self._sup_dbcm_view:
+                # only update when DBCM view is supported
+                self.show_as_dbcm_chkbox.config(state=state1)
+            if self._sup_norm_view:
+                # only update when BCM norm view is supported
+                self.bcm_norm_toggle_chkbox.config(state=state2)
         #
         fig.canvas.draw_idle()
 
