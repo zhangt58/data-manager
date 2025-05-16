@@ -118,10 +118,10 @@ class MainWindow(tk.Tk):
         self.main_frame = main_frame
         #
         self.left_panel = ttk.Frame(self.main_frame, padding=2, borderwidth=1)
-        main_frame.add(self.left_panel)
+        main_frame.add(self.left_panel, weight=1)
         #
         self.right_panel = ttk.Frame(self.main_frame, padding=2, borderwidth=2)
-        main_frame.add(self.right_panel)
+        main_frame.add(self.right_panel, weight=1)
 
         #
         self.create_table_panel()
@@ -334,7 +334,7 @@ class MainWindow(tk.Tk):
         data_frame.rowconfigure(1, weight=0)
         data_frame.rowconfigure(2, weight=0)
         data_frame.columnconfigure(0, weight=1)
-        # data_frame.grid_propagate(False)
+        data_frame.grid_propagate(False)
 
         tree_frame = ttk.Frame(data_frame)
         tree_frame.grid(row=0, column=0, sticky="nsew")
