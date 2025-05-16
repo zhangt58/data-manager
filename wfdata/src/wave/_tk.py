@@ -84,8 +84,7 @@ class FigureWindow(tk.Toplevel):
         # trip details
         trip_info_file = kws.get('trip_info_file', None)
         if trip_info_file is not None:
-            df_info = pd.read_hdf(trip_info_file)[
-                    ["ID", "Energy", "devices", "t window", "threshold", "Ion"]]
+            df_info = pd.read_hdf(trip_info_file)
         else:
             df_info = None
 
@@ -104,7 +103,8 @@ class FigureWindow(tk.Toplevel):
                         trip_info_series = _df_fid.iloc[0]
             self.place_figure(main_frame, fig, fig_title, irow, icol, padx, pady,
                               fig_dpi=kws.get('fig_dpi', None), dbcm_df=dbcm_df,
-                              bcm_fscale_map=bcm_fscale_map, trip_info=trip_info_series)
+                              bcm_fscale_map=bcm_fscale_map,
+                              trip_info_series=trip_info_series)
         del df_info
 
         # bottom area (notes and Quit button)
@@ -123,11 +123,10 @@ class FigureWindow(tk.Toplevel):
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
                      padx: int = 5, pady: int = 5, fig_dpi: int = None, **kws):
-        # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict, trip_info: Series
+        # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict, trip_info_series: Series
         dbcm_df = kws.get('dbcm_df', None)
         bcm_fscale_map = kws.get('bcm_fscale_map', None)
-        trip_info = kws.get('trip_info', None)
-        print(trip_info)
+        trip_info_series = kws.get('trip_info_series', None)
         #
         frame = ttk.LabelFrame(parent, text=title, borderwidth=1, relief=tk.GROOVE)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")
@@ -166,6 +165,24 @@ class FigureWindow(tk.Toplevel):
         # figure
         fig_frame = ttk.Frame(frame)
         fig_frame.pack(fill=tk.BOTH, expand=True)
+
+        # update trip info to the figure title
+        if trip_info_series is not None:
+            _x = trip_info_series
+            _pwr_s = f"{_x['Power']/1e3:.2f}kW" if _x['Power'] > 1e3 else f"{int(_x['Power'])}W"
+            _ek0 = _x['Energy']
+            if pd.isna(_ek0):
+                _ek0_s = 'N/A'
+            else:
+                _ek0_s = f'{_ek0:.1f}MeV/u'
+            _fid_s = _x['ID']
+            _ion_s = _x['Ion']
+            fig_title = f"[{_fid_s}] {_ion_s} ({_ek0_s}, {_pwr_s}) - {_x['Device']}"
+            for _i, _j, _k in zip(_x['devices'], _x['t window'], _x['threshold']):
+                if _i == "N/A":
+                    continue
+                fig_title += f"\n⚠️{_i}-{_j}({_k})"
+            figure.get_axes()[0].set_title(fig_title)
 
         # change figure dpi
         if fig_dpi is not None:
