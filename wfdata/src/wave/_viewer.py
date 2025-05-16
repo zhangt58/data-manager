@@ -50,6 +50,7 @@ class MainWindow(tk.Tk):
 
     def __init__(self, csv_file: str, trip_info_file: str, event_filter_file: str,
                  imags_dir: str, data_dirs: list[str], fig_dpi: Union[int, None] = None,
+                 fig_size: Union[str, None] = None,
                  theme_name: str = "arc", icon_path: Union[str, None] = None,
                  column_widths: dict = None):
         super().__init__()
@@ -99,6 +100,7 @@ class MainWindow(tk.Tk):
         self.data_dirs: list[Path] = [Path(d) for d in data_dirs]
         self.column_widths = {} if column_widths is None else column_widths
         self.fig_dpi = fig_dpi
+        self.fig_size = fig_size
 
         # info for faults table panel
         self.info_var = tk.StringVar()
@@ -662,6 +664,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             cmdline += f" --theme {self.theme_name}"
             if self.fig_dpi is not None:
                 cmdline += f" --fig-dpi {self.fig_dpi}"
+            if self.fig_size is not None:
+                cmdline += f" --fig-size {self.fig_size}"
             if self.trip_info_file is not None:
                 cmdline += f" --trip-info-file {self.trip_info_file}"
             _info_msg = f"Ploting with the {data_path} (raw)" if not is_opt else \
@@ -931,10 +935,12 @@ def _read_evt_typ_filter(filepath: Path) -> Union[None, list[str]]:
 
 def main(mps_faults_path: str, trip_info_file: str, event_filter_file: str,
          images_dir: str, data_dirs: list[str], geometry: str = "1600x1200",
-         fig_dpi: Union[int, None] = None, theme_name: str = "arc",
+         fig_dpi: Union[int, None] = None,
+         fig_size: Union[str, None] = None,
+         theme_name: str = "arc",
          icon_path: Union[str, None] = None, **kws):
     app = MainWindow(mps_faults_path, trip_info_file, event_filter_file,
-                     images_dir, data_dirs, fig_dpi,
+                     images_dir, data_dirs, fig_dpi, fig_size,
                      theme_name, icon_path, column_widths=kws)
     app.geometry(geometry)
     w, h = geometry.split("x")
