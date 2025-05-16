@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import re
 import numpy as np
 import pandas as pd
 import tkinter as tk
@@ -44,10 +45,18 @@ _LINE_COLORS = [
     '#17becf'
 ]
 
+MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
+FAULT_ID_REGEX = re.compile(r'(\d{5,})(?=_opt\.h5|\.h5$)')
+
 
 class FigureWindow(tk.Toplevel):
     # Present figures in a Tkinter GUI,
-    # keywords: fig_dpi, theme_name, dbcm_dfs: list[pd.DataFrame], bcm_fscale_maps: list[dict]
+    # keywords:
+    # - fig_dpi: int
+    # - theme_name: str
+    # - dbcm_dfs: list[pd.DataFrame]
+    # - bcm_fscale_maps: list[dict]
+    # - trip_info_file: str
     def __init__(self, figures: list[tuple],
                  window_title: str, grid: tuple[int, int],
                  padx: int = 5, pady: int = 5, notes: str = "",
@@ -72,15 +81,31 @@ class FigureWindow(tk.Toplevel):
 
         dbcm_dfs = kws.get('dbcm_dfs', None)
         bcm_fscale_maps = kws.get('bcm_fscale_maps', None)
+        # trip details
+        trip_info_file = kws.get('trip_info_file', None)
+        if trip_info_file is not None:
+            df_info = pd.read_hdf(trip_info_file)
+        else:
+            df_info = None
 
         # layout figures
         for i, (fig, fig_title) in enumerate(figures):
             irow, icol = i // ncols, i % ncols
             dbcm_df = dbcm_dfs[i] if dbcm_dfs is not None else None
             bcm_fscale_map = bcm_fscale_maps[i] if bcm_fscale_maps is not None else None
+            trip_info_series = None
+            if df_info is not None:
+                _match_fid = FAULT_ID_REGEX.search(fig_title)
+                if _match_fid:
+                    _fid = int(_match_fid.group(1))
+                    _df_fid = df_info[df_info['ID']==_fid]
+                    if not _df_fid.empty:
+                        trip_info_series = _df_fid.iloc[0]
             self.place_figure(main_frame, fig, fig_title, irow, icol, padx, pady,
                               fig_dpi=kws.get('fig_dpi', None), dbcm_df=dbcm_df,
-                              bcm_fscale_map=bcm_fscale_map)
+                              bcm_fscale_map=bcm_fscale_map,
+                              trip_info_series=trip_info_series)
+        del df_info
 
         # bottom area (notes and Quit button)
         bottom_frame = ttk.Frame(self)
@@ -98,9 +123,10 @@ class FigureWindow(tk.Toplevel):
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
                      padx: int = 5, pady: int = 5, fig_dpi: int = None, **kws):
-        # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict
+        # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict, trip_info_series: Series
         dbcm_df = kws.get('dbcm_df', None)
         bcm_fscale_map = kws.get('bcm_fscale_map', None)
+        trip_info_series = kws.get('trip_info_series', None)
         #
         frame = ttk.LabelFrame(parent, text=title, borderwidth=1, relief=tk.GROOVE)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")
@@ -108,11 +134,13 @@ class FigureWindow(tk.Toplevel):
         # tools frame:
         #      0         1          2
         #0 |toolbar | bcm_ctrl | X-Axis |
-        #1 |phase   |          | Y-Axis |
+        #1 |phase   |AVG-chk(*)| Y-Axis |
         # figure frame
         # misc frame
         # BCM trace visibility ctrl frame
         # BPM trace visibility ctrl frame
+        # (*) AVG-chk: a row of Checkbuttons for applying rolling average at
+        #              different window size
         #
         tools_frame = ttk.Frame(frame)
         tools_frame.pack(fill=tk.X, padx=2, pady=2)
@@ -128,13 +156,36 @@ class FigureWindow(tk.Toplevel):
         xaxis_frame.grid(row=0, column=2, sticky="ew")
         #
         pha_frame = ttk.Frame(tools_frame)
+        wave_roll_frame = ttk.Frame(tools_frame)
         yaxis_frame = ttk.Frame(tools_frame)
         pha_frame.grid(row=1, column=0, sticky="ew")
+        wave_roll_frame.grid(row=1, column=1, sticky="ew")
         yaxis_frame.grid(row=1, column=2, sticky="ew")
 
         # figure
         fig_frame = ttk.Frame(frame)
         fig_frame.pack(fill=tk.BOTH, expand=True)
+
+        # update trip info to the figure title
+        if trip_info_series is not None:
+            _x = trip_info_series
+            _pwr_s = f"{_x['Power']/1e3:.2f}kW" if _x['Power'] > 1e3 else f"{int(_x['Power'])}W"
+            _ek0 = _x['Energy']
+            if pd.isna(_ek0):
+                _ek0_s = 'N/A'
+            else:
+                _ek0_s = f'{_ek0:.1f}MeV/u'
+            _fid_s = _x['ID']
+            _ion_s = _x['Ion']
+            fig_title = f"[{_fid_s}] {_ion_s} ({_ek0_s}, {_pwr_s}) - {_x['Device']}"
+            for _i, _j, _k in zip(_x['devices'], _x['t window'], _x['threshold']):
+                if _i == "N/A":
+                    continue
+                fig_title += f"\n⚠️{_i}-{_j}({_k})"
+            title0 = figure.get_axes()[0].title
+            figure.get_axes()[0].set_title(fig_title,
+                    fontsize=title0.get_fontsize(),
+                    fontfamily=title0.get_fontfamily())
 
         # change figure dpi
         if fig_dpi is not None:
@@ -220,6 +271,8 @@ class FigureWindow(tk.Toplevel):
         ax_bcm = None
 
         # xaxis frame
+        ttk.Separator(xaxis_frame, orient="vertical").pack(
+                side=tk.LEFT, fill=tk.Y, padx=1)
         i = 1
         sync_lbl = ttk.Label(xaxis_frame, text="Sync ↔")
         sync_lbl.pack(side=tk.LEFT, padx=1)
@@ -275,7 +328,7 @@ class FigureWindow(tk.Toplevel):
                                 figure, ax_bcm)
         )
         self.show_as_dbcm_chkbox = show_as_dbcm_chkbox
-         # button for hints
+        # button for hints
         bcm_help_btn = ttk.Button(bcm_ctrl_frame, text="?", width=2,
                                   command=partial(self.on_help_bcm_controls, bcm_fscale_map))
         if dbcm_df is None or dbcm_df.empty:
@@ -287,6 +340,8 @@ class FigureWindow(tk.Toplevel):
             bcm_norm_toggle_chkbox.config(state="disabled")
             bcm_help_btn.config(state="disabled")
         #
+        ttk.Separator(bcm_ctrl_frame, orient="vertical").pack(
+                side=tk.LEFT, fill=tk.Y, padx=1)
         bcm_ctrl_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         bcm_help_btn.pack(side=tk.RIGHT, padx=2)
         bcm_norm_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
@@ -299,7 +354,35 @@ class FigureWindow(tk.Toplevel):
         self._create_bcm_vis_btns(bcm_vis_ctrl_frame, figure, ax_bcm)
         self._create_bpm_vis_btns(bpm_vis_ctrl_frame, figure, ax_pha, ax_mag)
 
+        # wave_roll_frame: rolling average
+        ttk.Separator(wave_roll_frame, orient="vertical").pack(
+                side=tk.LEFT, fill=tk.Y, padx=1)
+        wave_roll_lbl = ttk.Label(wave_roll_frame, text="Moving Average")
+        wave_roll_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        # keys: window size (str), '15', '150', etc.
+        self.roll_var_map: dict = {}
+        self.roll_chkbox_map: dict = {}
+        # keys: line labels (original) + line label + win_size_s (rolling averaged ones)
+        self.trace_data_map: dict = {}
+        #
+        for win_size in (150, 15):
+            win_size_s = str(win_size)
+            _v = self.roll_var_map.setdefault(win_size_s, tk.BooleanVar(value=False))
+            _o = ttk.Checkbutton(wave_roll_frame,
+                                 text=f"{win_size}{MU_GREEK}s",
+                                 variable=_v,
+                                 command=partial(
+                                     self.on_rolling_wave, win_size,
+                                     figure, ax_bcm, ax_pha, ax_mag
+                                 )
+                 )
+            _o.pack(side=tk.RIGHT, padx=2)
+            self.roll_chkbox_map[win_size_s] = _o
+
+
         # yaxis_frame
+        ttk.Separator(yaxis_frame, orient="vertical").pack(
+                side=tk.LEFT, fill=tk.Y, padx=1)
         # add a button to adjust auto scale Y limits
         auto_y_lbl = ttk.Label(yaxis_frame, text="Auto Y")
         auto_y_btn = ttk.Button(yaxis_frame, text="↕", width=2,
@@ -344,6 +427,78 @@ class FigureWindow(tk.Toplevel):
         t_0 = self.find_first_valid_t()
         sub_pha_txt1.insert(0, str(t_0))
         sub_pha_txt2.insert(0, str(t_0 + 10))
+
+    def on_rolling_wave(self, win_size: int, fig, ax_bcm, ax_pha, ax_mag):
+        """ Apply rolling average to the waves.
+        """
+        win_size_s = str(win_size)
+        is_roll_at_win_size = self.roll_var_map.get(win_size_s).get()
+        if is_roll_at_win_size:
+            # disable other roll_<win_size>_chkbox and
+            # the chkbox for BCM/DBCM view, Norm/raw BCM
+            other_state_s = "disabled"
+            self._rolling_bcm_traces(ax_bcm, win_size)
+        else:
+            # enable other roll_<win_size>_chkbox
+            # restore the chkbox for BCM/DBCM view, Norm/raw BCM
+            # with the var variables
+            other_state_s = "normal"
+            self._restore_bcm_traces(ax_bcm)
+
+        # update other rolling chkbox state
+        for i, chkbox in self.roll_chkbox_map.items():
+            if i == win_size_s:
+                continue
+            chkbox.config(state=other_state_s)
+        # update the checkbox for DBCM/BCM view, norm/raw BCM data
+        if other_state_s == "disabled":
+            for o in (self.bcm_norm_toggle_chkbox, self.show_as_dbcm_chkbox):
+                o.config(state=other_state_s)
+        else:
+            show_dbcm = self.show_as_dbcm_toggle_var.get()
+            norm_bcm = self.bcm_norm_toggle_var.get()
+            if not show_dbcm and not norm_bcm:
+                state1, state2 = "normal", "normal"
+            if show_dbcm and not norm_bcm:
+                state1, state2 = "normal", "disabled"
+            if not show_dbcm and norm_bcm:
+                state1, state2 = "disabled", "normal"
+            self.show_as_dbcm_chkbox.config(state=state1)
+            self.bcm_norm_toggle_chkbox.config(state=state2)
+        #
+        fig.canvas.draw_idle()
+
+    def _restore_bcm_traces(self, ax):
+        """ Restore the traces before rolling averaging.
+        """
+        # normalized trace?
+        is_norm = self.bcm_norm_toggle_var.get()
+        for l in ax.get_lines():
+            name = l.get_label()
+            name = f"{name}_norm" if is_norm else name
+            y0 = self.trace_data_map[name]
+            l.set_ydata(y0)
+        _auto_scale_y(ax)
+
+    def _rolling_bcm_traces(self, ax, win_size: int):
+        """ Apply rolling average to the BCM traces.
+        """
+        # normalized trace?
+        is_norm = self.bcm_norm_toggle_var.get()
+        for l in ax.get_lines():
+            name = l.get_label()
+            # since the same label is being used for original and the normalized trace
+            # here needs to use different names in the trace_data_map.
+            name = f"{name}_norm" if is_norm else name
+            roll_name = f"{name}_{win_size}"
+            # get and keep the original data, rolled one
+            y0 = self.trace_data_map.setdefault(name, l.get_ydata())
+            roll_y = self.trace_data_map.setdefault(roll_name, np.convolve(
+                y0, np.ones(win_size) / win_size, mode='full')[:len(y0)])
+            # only change the ydata
+            l.set_ydata(roll_y)
+        _auto_scale_y(ax)
+
 
     def save_bcm_plot(self, ax):
         """ Save BCM plot.
