@@ -41,7 +41,7 @@ def read_license():
 
 setup(
     name=f'{PKG_NAME}',
-    version='1.2.5',
+    version='1.2.6',
     description='Tools for Managing the post-mortem BPM/BCM waveform data',
     long_description=readme(),
     license=read_license(),
