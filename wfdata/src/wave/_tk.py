@@ -182,7 +182,10 @@ class FigureWindow(tk.Toplevel):
                 if _i == "N/A":
                     continue
                 fig_title += f"\n⚠️{_i}-{_j}({_k})"
-            figure.get_axes()[0].set_title(fig_title)
+            title0 = figure.get_axes()[0].title
+            figure.get_axes()[0].set_title(fig_title,
+                    fontsize=title0.get_fontsize(),
+                    fontfamily=title0.get_fontfamily())
 
         # change figure dpi
         if fig_dpi is not None:
