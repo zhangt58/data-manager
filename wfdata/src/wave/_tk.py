@@ -271,6 +271,8 @@ class FigureWindow(tk.Toplevel):
         ax_bcm = None
 
         # xaxis frame
+        ttk.Separator(xaxis_frame, orient="vertical").pack(
+                side=tk.LEFT, fill=tk.Y, padx=1)
         i = 1
         sync_lbl = ttk.Label(xaxis_frame, text="Sync ↔")
         sync_lbl.pack(side=tk.LEFT, padx=1)
@@ -338,6 +340,8 @@ class FigureWindow(tk.Toplevel):
             bcm_norm_toggle_chkbox.config(state="disabled")
             bcm_help_btn.config(state="disabled")
         #
+        ttk.Separator(bcm_ctrl_frame, orient="vertical").pack(
+                side=tk.LEFT, fill=tk.Y, padx=1)
         bcm_ctrl_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         bcm_help_btn.pack(side=tk.RIGHT, padx=2)
         bcm_norm_toggle_chkbox.pack(side=tk.RIGHT, padx=2)
@@ -351,6 +355,8 @@ class FigureWindow(tk.Toplevel):
         self._create_bpm_vis_btns(bpm_vis_ctrl_frame, figure, ax_pha, ax_mag)
 
         # wave_roll_frame: rolling average
+        ttk.Separator(wave_roll_frame, orient="vertical").pack(
+                side=tk.LEFT, fill=tk.Y, padx=1)
         wave_roll_lbl = ttk.Label(wave_roll_frame, text="Moving Average")
         wave_roll_lbl.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         # keys: window size (str), '15', '150', etc.
@@ -375,6 +381,8 @@ class FigureWindow(tk.Toplevel):
 
 
         # yaxis_frame
+        ttk.Separator(yaxis_frame, orient="vertical").pack(
+                side=tk.LEFT, fill=tk.Y, padx=1)
         # add a button to adjust auto scale Y limits
         auto_y_lbl = ttk.Label(yaxis_frame, text="Auto Y")
         auto_y_btn = ttk.Button(yaxis_frame, text="↕", width=2,
