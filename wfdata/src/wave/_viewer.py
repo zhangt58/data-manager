@@ -517,7 +517,7 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
                              width=4)
         fit_btn.pack(side=tk.LEFT, padx=2)
         save_img_btn = ttk.Button(ctrl_frame1, text="Save", command=self.on_save_image,
-                                  width=2)
+                                  width=5)
         save_img_btn.pack(side=tk.LEFT, padx=2)
         self.save_img_btn = save_img_btn
         # plot
