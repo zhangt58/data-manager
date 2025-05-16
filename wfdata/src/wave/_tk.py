@@ -270,6 +270,11 @@ class FigureWindow(tk.Toplevel):
         self.bcm_fscales: list[float] = []
         ax_bcm = None
 
+        # if the DBCM and Normalize checkbox supported
+        # will be set False if the required data is missing
+        self._sup_dbcm_view = True
+        self._sup_norm_view = True
+
         # xaxis frame
         ttk.Separator(xaxis_frame, orient="vertical").pack(
                 side=tk.LEFT, fill=tk.Y, padx=1)
@@ -333,12 +338,16 @@ class FigureWindow(tk.Toplevel):
                                   command=partial(self.on_help_bcm_controls, bcm_fscale_map))
         if dbcm_df is None or dbcm_df.empty:
             show_as_dbcm_chkbox.config(state="disabled")
+            # not support DBCM view, the checkbox should always be disabled
+            self._sup_dbcm_view = False
         else:
             self.dbcm_df = dbcm_df
             self.dbcm_plots = None
         if bcm_fscale_map is None or not bcm_fscale_map:
             bcm_norm_toggle_chkbox.config(state="disabled")
             bcm_help_btn.config(state="disabled")
+            # not support BCM norm view, the checkbox should always be disabled
+            self._sup_norm_view = False
         #
         ttk.Separator(bcm_ctrl_frame, orient="vertical").pack(
                 side=tk.LEFT, fill=tk.Y, padx=1)
@@ -463,8 +472,12 @@ class FigureWindow(tk.Toplevel):
                 state1, state2 = "normal", "disabled"
             if not show_dbcm and norm_bcm:
                 state1, state2 = "disabled", "normal"
-            self.show_as_dbcm_chkbox.config(state=state1)
-            self.bcm_norm_toggle_chkbox.config(state=state2)
+            if self._sup_dbcm_view:
+                # only update when DBCM view is supported
+                self.show_as_dbcm_chkbox.config(state=state1)
+            if self._sup_norm_view:
+                # only update when BCM norm view is supported
+                self.bcm_norm_toggle_chkbox.config(state=state2)
         #
         fig.canvas.draw_idle()
 
