@@ -300,7 +300,7 @@ def plot(df: pd.DataFrame, t0: str, title: str, **kws):
 
     xylabel_fontdict = {"size": DEFAULT_MPL_FONT_SIZE + 2, "family": DEFAULT_MPL_FONT_FAMILY}
     xyticks_fontdict = {"size": DEFAULT_MPL_FONT_SIZE + 1, "family": DEFAULT_MPL_FONT_FAMILY}
-    title_fontdict = {"size": DEFAULT_MPL_FONT_SIZE + 4, "family": DEFAULT_MPL_FONT_FAMILY}
+    title_fontdict = {"size": DEFAULT_MPL_FONT_SIZE + 3, "family": DEFAULT_MPL_FONT_FAMILY}
     grid_color = "#7F8C8D"
 
     # BCM
