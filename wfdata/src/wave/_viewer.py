@@ -662,6 +662,8 @@ Copyright (c) 2025 Tong Zhang, FRIB, Michigan State University."""
             cmdline += f" --theme {self.theme_name}"
             if self.fig_dpi is not None:
                 cmdline += f" --fig-dpi {self.fig_dpi}"
+            if self.trip_info_file is not None:
+                cmdline += f" --trip-info-file {self.trip_info_file}"
             _info_msg = f"Ploting with the {data_path} (raw)" if not is_opt else \
                         f"Ploting with the {data_path} (opt)"
             logger.info(_info_msg)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import re
 import numpy as np
 import pandas as pd
 import tkinter as tk
@@ -45,11 +46,17 @@ _LINE_COLORS = [
 ]
 
 MU_GREEK = u"\N{GREEK SMALL LETTER MU}"
+FAULT_ID_REGEX = re.compile(r'(\d{5,})(?=_opt\.h5|\.h5$)')
 
 
 class FigureWindow(tk.Toplevel):
     # Present figures in a Tkinter GUI,
-    # keywords: fig_dpi, theme_name, dbcm_dfs: list[pd.DataFrame], bcm_fscale_maps: list[dict]
+    # keywords:
+    # - fig_dpi: int
+    # - theme_name: str
+    # - dbcm_dfs: list[pd.DataFrame]
+    # - bcm_fscale_maps: list[dict]
+    # - trip_info_file: str
     def __init__(self, figures: list[tuple],
                  window_title: str, grid: tuple[int, int],
                  padx: int = 5, pady: int = 5, notes: str = "",
@@ -74,15 +81,31 @@ class FigureWindow(tk.Toplevel):
 
         dbcm_dfs = kws.get('dbcm_dfs', None)
         bcm_fscale_maps = kws.get('bcm_fscale_maps', None)
+        # trip details
+        trip_info_file = kws.get('trip_info_file', None)
+        if trip_info_file is not None:
+            df_info = pd.read_hdf(trip_info_file)[
+                    ["ID", "Energy", "devices", "t window", "threshold", "Ion"]]
+        else:
+            df_info = None
 
         # layout figures
         for i, (fig, fig_title) in enumerate(figures):
             irow, icol = i // ncols, i % ncols
             dbcm_df = dbcm_dfs[i] if dbcm_dfs is not None else None
             bcm_fscale_map = bcm_fscale_maps[i] if bcm_fscale_maps is not None else None
+            trip_info_series = None
+            if df_info is not None:
+                _match_fid = FAULT_ID_REGEX.search(fig_title)
+                if _match_fid:
+                    _fid = int(_match_fid.group(1))
+                    _df_fid = df_info[df_info['ID']==_fid]
+                    if not _df_fid.empty:
+                        trip_info_series = _df_fid.iloc[0]
             self.place_figure(main_frame, fig, fig_title, irow, icol, padx, pady,
                               fig_dpi=kws.get('fig_dpi', None), dbcm_df=dbcm_df,
-                              bcm_fscale_map=bcm_fscale_map)
+                              bcm_fscale_map=bcm_fscale_map, trip_info=trip_info_series)
+        del df_info
 
         # bottom area (notes and Quit button)
         bottom_frame = ttk.Frame(self)
@@ -100,9 +123,11 @@ class FigureWindow(tk.Toplevel):
 
     def place_figure(self, parent, figure, title: str, row: int, col: int,
                      padx: int = 5, pady: int = 5, fig_dpi: int = None, **kws):
-        # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict
+        # keywords: dbcm_df: pd.DataFrame, bcm_fscale_map: dict, trip_info: Series
         dbcm_df = kws.get('dbcm_df', None)
         bcm_fscale_map = kws.get('bcm_fscale_map', None)
+        trip_info = kws.get('trip_info', None)
+        print(trip_info)
         #
         frame = ttk.LabelFrame(parent, text=title, borderwidth=1, relief=tk.GROOVE)
         frame.grid(row=row, column=col, padx=padx, pady=pady, sticky="nsew")

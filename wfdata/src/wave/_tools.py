@@ -305,6 +305,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                         help="The theme to style the UI, --list-themes to see options.")
     parser.add_argument("--list-themes", action="store_true",
                         help="List the supported UI themes.")
+    parser.add_argument("--trip-info-file", dest="trip_info_file", type=str,
+                        help="The .h5 file for the MPS MTCA trip info.")
 
     if call_as_subtool:
         args = parser.parse_args(sys.argv[2:])
@@ -365,7 +367,8 @@ def plot_tool(call_as_subtool: bool = False, prog: str = None):
                             notes=f"[{datetime.now().isoformat()[:-3]}] "
                                   f"Generated with the command: {' '.join(sys.argv)}",
                             fig_dpi=args.fig_dpi, theme_name=args.theme_name,
-                            dbcm_dfs=dbcm_dfs, bcm_fscale_maps=bcm_fscale_maps)
+                            dbcm_dfs=dbcm_dfs, bcm_fscale_maps=bcm_fscale_maps,
+                            trip_info_file=args.trip_info_file)
         _app.mainloop()
         sys.exit(0)
 
